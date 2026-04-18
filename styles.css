@@ -1,0 +1,35 @@
+/* 1998-era Geocities flavor — layout is all <table>, not modern CSS layout */
+
+body {
+  margin: 0;
+  padding: 12px 0;
+  font-family: "Times New Roman", Times, serif;
+  background-color: #000033;
+  background-image: url("images/bg-stars.gif");
+  background-repeat: repeat;
+  background-attachment: scroll;
+}
+
+table {
+  font-family: "Times New Roman", Times, serif;
+}
+
+a:link {
+  color: #ffff00;
+}
+
+a:visited {
+  color: #ff00ff;
+}
+
+a:active {
+  color: #00ffff;
+}
+
+marquee {
+  font-family: "Comic Sans MS", "Comic Sans", cursive;
+}
+
+img {
+  vertical-align: middle;
+}
