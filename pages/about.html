@@ -44,7 +44,7 @@
 <td bgcolor="#330066">
 
 <p align="center">
-<a href="../index.html"><img src="../images/back-button.gif" width="120" height="40" alt="&lt;- Back to Home" border="0"></a>
+<a href="../index.html"><img src="../images/back-button.gif" width="120" height="40" alt="&lt;- Back to Home" border="0" loading="lazy"></a>
 <br>
 <font face="Comic Sans MS, Comic Sans, cursive" size="1" color="#ffff00"><b>&lt;- Back to Home</b></font>
 </p>
@@ -59,7 +59,10 @@ I like loud fonts, tiled stars, and pages that load in under a minute on dial-up
 </p>
 
 <p align="center">
-<img src="../images/me.jpg" width="200" height="200" alt="Stand-in portrait (Van Gogh self-portrait, public domain)" border="3" bordercolor="#ff00cc">
+<picture>
+<source srcset="../images/me.webp" type="image/webp">
+<img src="../images/me.jpg" width="200" height="200" alt="Stand-in portrait (Van Gogh self-portrait, public domain)" border="3" bordercolor="#ff00cc" loading="lazy">
+</picture>
 <br>
 <font face="Comic Sans MS, Comic Sans, cursive" size="2" color="#00ffff">(that's me... or will be when i scan a pix)</font>
 </p>
@@ -91,6 +94,6 @@ I like loud fonts, tiled stars, and pages that load in under a minute on dial-up
 </tr>
 </table>
 
-<script src="../script.js"></script>
+<script src="../script.js" defer></script>
 </body>
 </html>
