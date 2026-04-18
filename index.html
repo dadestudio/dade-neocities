@@ -41,7 +41,7 @@ img {
 }
 </style>
 <link rel="stylesheet" href="styles.css" type="text/css">
-<bgsound src="sounds/midi.mid" loop="infinite">
+<script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
 </head>
 <body bgcolor="#000033" text="#00ff00" link="#ffff00" vlink="#ff00ff" alink="#00ffff">
 
@@ -71,11 +71,11 @@ img {
 <font face="Comic Sans MS, Comic Sans, cursive" size="2" color="#ffff00"><b>~ NAV ~</b></font>
 <br><br>
 <font face="Times New Roman, Times, serif" size="2" color="#ffffff">
-<a href="index.html"><font color="#00ff00"><b>&gt;&gt; Home &lt;&lt;</b></font></a><br><br>
-<a href="pages/about.html"><font color="#ff00ff">About</font></a><br><br>
-<a href="pages/guestbook.html"><font color="#00ffff">Guestbook</font></a><br><br>
-<a href="pages/links.html"><font color="#ffff00">Links</font></a><br><br>
-<a href="pages/webring.html"><font color="#ff00ff">Webring</font></a><br><br>
+<a class="nav-link" href="index.html"><font color="#00ff00"><b>&gt;&gt; Home &lt;&lt;</b></font></a><br><br>
+<a class="nav-link" href="pages/about.html"><font color="#ff00ff">About</font></a><br><br>
+<a class="nav-link" href="pages/guestbook.html"><font color="#00ffff">Guestbook</font></a><br><br>
+<a class="nav-link" href="pages/links.html"><font color="#ffff00">Links</font></a><br><br>
+<a class="nav-link" href="pages/webring.html"><font color="#ff00ff">Webring</font></a><br><br>
 </font>
 <br>
 <font face="Comic Sans MS, Comic Sans, cursive" size="1" color="#00ff00">hit counter is --&gt;</font>
@@ -131,6 +131,13 @@ This is <font color="#ff00ff" size="4"><b>dadeog</b></font>'s corner of cyberspa
 <td bgcolor="#ff0099" align="center">
 <div id="status-scroller"></div>
 <br>
+<div id="audio-player">
+<span id="dade-play-audio" class="dade-audio-play" role="button" tabindex="0">[ ♪ PLAY ]</span>
+<select id="track-select" class="dade-track-select" title="Synth track"></select>
+<canvas id="viz" width="320" height="80" class="dade-viz-canvas" aria-hidden="true"></canvas>
+<span id="dade-sfx-toggle" class="dade-sfx-toggle" role="button" tabindex="0">[ SFX: OFF ]</span>
+</div>
+<br>
 <font face="Times New Roman, Times, serif" size="2" color="#ffff00">
 &copy; 1998 dadeog (jk it's <font color="#ffffff">2026</font> but the vibe is 1998)<br>
 <a href="mailto:webmaster@dadeog.neocities.org"><font color="#00ffff">webmaster@dadeog.neocities.org</font></a>
@@ -152,6 +159,9 @@ This is <font color="#ff00ff" size="4"><b>dadeog</b></font>'s corner of cyberspa
 <script type="module">
 import { initCRT, setCRTEnabled } from './effects/crt.js';
 import { initStarfield, setStarsEnabled } from './effects/starfield.js';
+import { tracks } from './audio/synth.js';
+import { initMidiPlayer } from './audio/midi-player.js';
+import { initSFX } from './audio/sfx.js';
 
 function readBool(key, def) {
   try {
@@ -195,6 +205,82 @@ starsBtn.addEventListener('click', function () {
   setStarsEnabled(starsOn);
   starsBtn.textContent = starsLabel(starsOn);
 });
+
+/* --- Phase 8 T3: footer audio (context unlock on PLAY only) --- */
+var audioBase = '';
+var midiPlayerApi = null;
+var midiLoadPromise = null;
+var trackSelect = document.getElementById('track-select');
+var viz = document.getElementById('viz');
+var playSpan = document.getElementById('dade-play-audio');
+var sfxSpan = document.getElementById('dade-sfx-toggle');
+
+for (var ti = 0; ti < tracks.length; ti++) {
+  var opt = document.createElement('option');
+  opt.value = tracks[ti].name;
+  opt.textContent = tracks[ti].name;
+  trackSelect.appendChild(opt);
+}
+
+function stopAllSynth() {
+  for (var si = 0; si < tracks.length; si++) tracks[si].stop();
+}
+
+function sfxRead() {
+  try {
+    return localStorage.getItem('sfx_enabled') === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+function sfxRefreshLabel() {
+  sfxSpan.textContent = '[ SFX: ' + (sfxRead() ? 'ON' : 'OFF') + ' ]';
+}
+
+sfxRefreshLabel();
+
+sfxSpan.addEventListener('click', function () {
+  try {
+    localStorage.setItem('sfx_enabled', sfxRead() ? 'false' : 'true');
+  } catch (e) {}
+  sfxRefreshLabel();
+});
+
+playSpan.addEventListener('click', function () {
+  if (!midiLoadPromise) {
+    midiLoadPromise = initMidiPlayer({ midiUrl: audioBase + 'sounds/midi.mid', canvas: viz });
+  }
+  midiLoadPromise
+    .then(function (api) {
+      midiPlayerApi = api;
+      var ctx = globalThis.__dadeAudioCtx;
+      return ctx.resume().then(function () {
+        api.startVisualizer();
+        api.startMidi();
+        globalThis.__dadeAudioUnlocked = true;
+      });
+    })
+    .catch(function (e) {
+      console.error(e);
+    });
+});
+
+trackSelect.addEventListener('change', function () {
+  if (!midiPlayerApi) return;
+  midiPlayerApi.stopMidi();
+  midiPlayerApi.setMidiAudible(false, 0.03);
+  stopAllSynth();
+  var name = trackSelect.value;
+  for (var sj = 0; sj < tracks.length; sj++) {
+    if (tracks[sj].name === name) {
+      tracks[sj].play();
+      break;
+    }
+  }
+});
+
+initSFX();
 </script>
 </body>
 </html>

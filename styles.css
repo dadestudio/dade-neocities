@@ -144,3 +144,52 @@ img {
 .dade-effect-btn:active {
   color: #00ffff;
 }
+
+/* Footer Web Audio player + MIDI visualizer (Phase 8 T3) */
+#audio-player {
+  box-sizing: border-box;
+  max-width: 100%;
+  margin: 0 auto 0.5em;
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 12px;
+  background-color: #000080;
+  border: 2px ridge #00ffff;
+  font-family: "Comic Sans MS", "Comic Sans", cursive;
+  font-size: 15px;
+  color: #ffff00;
+}
+
+.dade-audio-play,
+.dade-sfx-toggle {
+  cursor: pointer;
+  font-weight: bold;
+  user-select: none;
+  color: #00ff00;
+}
+
+.dade-audio-play:hover,
+.dade-sfx-toggle:hover {
+  color: #ffff00;
+}
+
+.dade-track-select {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 14px;
+  background-color: #330066;
+  color: #00ff00;
+  border: 2px inset #ff00cc;
+  padding: 2px 6px;
+}
+
+.dade-viz-canvas {
+  display: block;
+  background: #000022;
+  border: 2px inset #808080;
+  image-rendering: pixelated;
+  max-width: 100%;
+  height: auto;
+}
