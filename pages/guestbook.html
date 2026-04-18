@@ -40,6 +40,8 @@
 <font color="#00ff00"><b>&gt;&gt; Guestbook &lt;&lt;</b></font><br><br>
 <a class="nav-link" href="links.html"><font color="#ffff00">Links</font></a><br><br>
 <a class="nav-link" href="webring.html"><font color="#ff00ff">Webring</font></a><br><br>
+<a class="nav-link" href="arcade.html"><font color="#00ff00"><b>[ ARCADE ]</b></font></a><br><br>
+<span id="dade-konami-secret"></span>
 </font>
 <br>
 <font face="Comic Sans MS, Comic Sans, cursive" size="1" color="#00ff00">hit counter is --&gt;</font>
@@ -275,6 +277,10 @@ trackSelect.addEventListener('change', function () {
 });
 
 initSFX();
+</script>
+<script type="module">
+import { initKonami } from '../interactive/konami.js';
+initKonami({ onUnlock: function () {} });
 </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<title>~*~ Webring ~*~</title>
+<title>~*~ Arcade ~*~</title>
 <link rel="stylesheet" href="../styles.css" type="text/css">
 <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
 </head>
@@ -16,7 +16,7 @@
 <tr>
 <td bgcolor="#ff00cc">
 <marquee behavior="scroll" direction="left" bgcolor="#ffff00">
-<font face="Comic Sans MS, Comic Sans, cursive" size="3" color="#000080"><b>*** WEBRING ZONE *** CLICK NEXT 2 ADVENTURE *** RANDOM = CHAOS ***</b></font>
+<font face="Comic Sans MS, Comic Sans, cursive" size="3" color="#000080"><b>*** ARCADE ZONE *** 800x600 OR BUST *** HIGH SCORES R 4 REAL ***</b></font>
 </marquee>
 </td>
 </tr>
@@ -39,8 +39,8 @@
 <a class="nav-link" href="about.html"><font color="#ff00ff">About</font></a><br><br>
 <a class="nav-link" href="guestbook.html"><font color="#00ffff">Guestbook</font></a><br><br>
 <a class="nav-link" href="links.html"><font color="#ffff00">Links</font></a><br><br>
-<font color="#00ff00"><b>&gt;&gt; Webring &lt;&lt;</b></font><br><br>
-<a class="nav-link" href="arcade.html"><font color="#00ff00"><b>[ ARCADE ]</b></font></a><br><br>
+<a class="nav-link" href="webring.html"><font color="#ff00ff">Webring</font></a><br><br>
+<font color="#00ff00"><b>&gt;&gt; [ ARCADE ] &lt;&lt;</b></font><br><br>
 <span id="dade-konami-secret"></span>
 </font>
 <br>
@@ -55,47 +55,20 @@
 <font face="Comic Sans MS, Comic Sans, cursive" size="1" color="#ffff00"><b>&lt;- Back to Home</b></font>
 </p>
 
-<font face="Times New Roman, Times, serif" size="4" color="#ffff00"><b>The Retro Web Ring</b></font>
-<p align="center">
-<font face="Comic Sans MS, Comic Sans, cursive" size="2" color="#00ffff">You are visitor #??? to this ring widget (fake)</font>
-</p>
+<font face="Times New Roman, Times, serif" size="4" color="#ffff00"><b>Arcade</b></font>
+<p><font face="Comic Sans MS, Comic Sans, cursive" size="2" color="#00ffff">Snake: arrows. Pong: W/S. Space restarts after game over.</font></p>
 
-<table width="100%" border="4" bordercolor="#00ff00" cellspacing="8" cellpadding="8" bgcolor="#000080" align="center" summary="webring widget">
-<tr>
-<td align="center">
-<font face="Comic Sans MS, Comic Sans, cursive" size="3" color="#ff00cc"><b>The Retro Web Ring</b></font>
-<br><br>
-<table border="0" cellspacing="12" cellpadding="0" summary="webring controls">
-<tr valign="middle">
-<td align="center">
-<a href="https://www.geocities.com/Heartland/Fields/0001/prev.html"><img src="../images/webring-prev.gif" width="88" height="31" alt="Previous site" border="0" loading="lazy"></a>
-<br>
-<font face="Times New Roman, Times, serif" size="2" color="#ffff00"><b>[ prev ]</b></font>
+<table width="100%" border="2" bordercolor="#00ffff" cellspacing="8" cellpadding="6" summary="games">
+<tr valign="top">
+<td width="50%" align="center" bgcolor="#220044">
+<font face="Comic Sans MS, Comic Sans, cursive" size="3" color="#ffff00"><b>SNAKE</b></font><br><br>
+<canvas id="snake-canvas" width="280" height="280" style="background:#102040;border:2px solid #ff00cc"></canvas><br><br>
+<font face="Times New Roman, Times, serif" size="2" color="#ffffff">High: <span id="snake-hi">0</span></font>
 </td>
-<td align="center">
-<a href="https://www.geocities.com/Heartland/Fields/0001/random.html"><img src="../images/webring-random.gif" width="88" height="31" alt="Random site" border="0" loading="lazy"></a>
-<br>
-<font face="Times New Roman, Times, serif" size="2" color="#ffff00"><b>[ random ]</b></font>
-</td>
-<td align="center">
-<a href="https://www.geocities.com/Heartland/Fields/0001/next.html"><img src="../images/webring-next.gif" width="88" height="31" alt="Next site" border="0" loading="lazy"></a>
-<br>
-<font face="Times New Roman, Times, serif" size="2" color="#ffff00"><b>[ next ]</b></font>
-</td>
-</tr>
-</table>
-<br>
-<img src="../images/under-construction.gif" width="200" height="150" alt="Under Construction" border="0" loading="lazy">
-<br><br>
-<table border="2" bordercolor="#ffff00" cellpadding="6" cellspacing="0" bgcolor="#330066" summary="member badge">
-<tr>
-<td align="center">
-<font face="Times New Roman, Times, serif" size="2" color="#ffffff"><b>Member since 1998</b></font>
-<br>
-<font face="Comic Sans MS, Comic Sans, cursive" size="2" color="#00ff00">Proud Retro Web Ring member #047</font>
-</td>
-</tr>
-</table>
+<td width="50%" align="center" bgcolor="#220044">
+<font face="Comic Sans MS, Comic Sans, cursive" size="3" color="#ffff00"><b>PONG</b></font><br><br>
+<canvas id="pong-canvas" width="280" height="280" style="background:#100028;border:2px solid #00ffff"></canvas><br><br>
+<font face="Times New Roman, Times, serif" size="2" color="#ffffff">Best score: <span id="pong-hi">0</span></font>
 </td>
 </tr>
 </table>
@@ -139,6 +112,9 @@ import { initStarfield, setStarsEnabled } from '../effects/starfield.js';
 import { tracks } from '../audio/synth.js';
 import { initMidiPlayer } from '../audio/midi-player.js';
 import { initSFX } from '../audio/sfx.js';
+import { initSnake } from '../interactive/snake.js';
+import { initPong } from '../interactive/pong.js';
+import { initKonami } from '../interactive/konami.js';
 
 function readBool(key, def) {
   try {
@@ -276,9 +252,19 @@ trackSelect.addEventListener('change', function () {
 });
 
 initSFX();
-</script>
-<script type="module">
-import { initKonami } from '../interactive/konami.js';
+
+initSnake(document.getElementById('snake-canvas'));
+initPong(document.getElementById('pong-canvas'));
+
+function refreshHi() {
+  try {
+    document.getElementById('snake-hi').textContent = localStorage.getItem('snake_high') || '0';
+    document.getElementById('pong-hi').textContent = localStorage.getItem('pong_high') || '0';
+  } catch (e) {}
+}
+refreshHi();
+setInterval(refreshHi, 400);
+
 initKonami({ onUnlock: function () {} });
 </script>
 </body>

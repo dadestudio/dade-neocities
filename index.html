@@ -76,6 +76,8 @@ img {
 <a class="nav-link" href="pages/guestbook.html"><font color="#00ffff">Guestbook</font></a><br><br>
 <a class="nav-link" href="pages/links.html"><font color="#ffff00">Links</font></a><br><br>
 <a class="nav-link" href="pages/webring.html"><font color="#ff00ff">Webring</font></a><br><br>
+<a class="nav-link" href="pages/arcade.html"><font color="#00ff00"><b>[ ARCADE ]</b></font></a><br><br>
+<span id="dade-konami-secret"></span>
 </font>
 <br>
 <font face="Comic Sans MS, Comic Sans, cursive" size="1" color="#00ff00">hit counter is --&gt;</font>
@@ -99,7 +101,7 @@ This is <font color="#ff00ff" size="4"><b>dadeog</b></font>'s corner of cyberspa
 <span id="dade-hit-counter"><img src="images/counter.gif" width="88" height="31" alt="Visitor counter" border="0" loading="lazy"></span>
 </p>
 <p align="center">
-<img src="images/under-construction.gif" width="200" height="150" alt="Under Construction" border="0" loading="lazy">
+<img id="dade-under-construction" src="images/under-construction.gif" width="200" height="150" alt="Under Construction" border="0" loading="lazy">
 </p>
 <p align="center">
 <font face="Times New Roman, Times, serif" size="2" color="#ffffff"><b>Best viewed in Netscape Navigator</b></font><br>
@@ -302,6 +304,12 @@ trackSelect.addEventListener('change', function () {
 });
 
 initSFX();
+</script>
+<script type="module">
+import { initKonami } from './interactive/konami.js';
+import { initEasterEggs } from './interactive/easter-eggs.js';
+initEasterEggs();
+initKonami({ onUnlock: function () {} });
 </script>
 </body>
 </html>
