@@ -92,7 +92,9 @@ I like loud fonts, tiled stars, and pages that load in under a minute on dial-up
 <br>
 <div id="audio-player">
 <span id="dade-play-audio" class="dade-audio-play" role="button" tabindex="0">[ ♪ PLAY ]</span>
-<select id="track-select" class="dade-track-select" title="Synth track"></select>
+<select id="track-select" class="dade-track-select" title="Synth track">
+<option value="midi" selected>MIDI</option>
+</select>
 <canvas id="viz" width="320" height="80" class="dade-viz-canvas" aria-hidden="true"></canvas>
 <span id="dade-sfx-toggle" class="dade-sfx-toggle" role="button" tabindex="0">[ SFX: OFF ]</span>
 </div>
@@ -210,8 +212,22 @@ playSpan.addEventListener('click', function () {
       midiPlayerApi = api;
       var ctx = globalThis.__dadeAudioCtx;
       return ctx.resume().then(function () {
+        stopAllSynth();
+        api.stopMidi();
+        api.setMidiAudible(false, 0.03);
         api.startVisualizer();
-        api.startMidi();
+        var sel = trackSelect.value;
+        if (sel === 'midi') {
+          api.setMidiAudible(true, 0.03);
+          api.startMidi();
+        } else {
+          for (var pj = 0; pj < tracks.length; pj++) {
+            if (tracks[pj].name === sel) {
+              tracks[pj].play();
+              break;
+            }
+          }
+        }
         globalThis.__dadeAudioUnlocked = true;
       });
     })
@@ -221,15 +237,20 @@ playSpan.addEventListener('click', function () {
 });
 
 trackSelect.addEventListener('change', function () {
-  if (!midiPlayerApi) return;
+  if (!midiPlayerApi || !globalThis.__dadeAudioUnlocked) return;
   midiPlayerApi.stopMidi();
   midiPlayerApi.setMidiAudible(false, 0.03);
   stopAllSynth();
   var name = trackSelect.value;
-  for (var sj = 0; sj < tracks.length; sj++) {
-    if (tracks[sj].name === name) {
-      tracks[sj].play();
-      break;
+  if (name === 'midi') {
+    midiPlayerApi.setMidiAudible(true, 0.03);
+    midiPlayerApi.startMidi();
+  } else {
+    for (var sj = 0; sj < tracks.length; sj++) {
+      if (tracks[sj].name === name) {
+        tracks[sj].play();
+        break;
+      }
     }
   }
 });
