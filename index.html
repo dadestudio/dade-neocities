@@ -45,6 +45,9 @@ img {
 </head>
 <body bgcolor="#000033" text="#00ff00" link="#ffff00" vlink="#ff00ff" alink="#00ffff">
 
+<canvas id="dade-starfield" class="dade-fx-starfield" aria-hidden="true"></canvas>
+<canvas id="dade-crt" class="dade-fx-crt" aria-hidden="true"></canvas>
+
 <table width="780" border="0" cellspacing="0" cellpadding="0" align="center" summary="page frame">
 <tr>
 <td bgcolor="#ff00cc">
@@ -132,6 +135,11 @@ This is <font color="#ff00ff" size="4"><b>dadeog</b></font>'s corner of cyberspa
 &copy; 1998 dadeog (jk it's <font color="#ffffff">2026</font> but the vibe is 1998)<br>
 <a href="mailto:webmaster@dadeog.neocities.org"><font color="#00ffff">webmaster@dadeog.neocities.org</font></a>
 <br><br>
+<div class="dade-effects-toggles">
+<button type="button" class="dade-effect-btn dade-effect-btn--crt" id="dade-toggle-crt">[ CRT: ON ]</button>
+<button type="button" class="dade-effect-btn dade-effect-btn--stars" id="dade-toggle-stars">[ STARS: ON ]</button>
+</div>
+<br>
 <a name="guestbook"></a>
 <font face="Comic Sans MS, Comic Sans, cursive" size="3" color="#ffff00"><b>Sign my guestbook!!!</b></font><br>
 <img src="images/mailbox.gif" width="64" height="64" alt="Mailbox" border="0" loading="lazy">
@@ -141,5 +149,52 @@ This is <font color="#ff00ff" size="4"><b>dadeog</b></font>'s corner of cyberspa
 </table>
 
 <script src="script.js" defer></script>
+<script type="module">
+import { initCRT, setCRTEnabled } from './effects/crt.js';
+import { initStarfield, setStarsEnabled } from './effects/starfield.js';
+
+function readBool(key, def) {
+  try {
+    var v = localStorage.getItem(key);
+    if (v === null) return def;
+    return v !== 'false';
+  } catch (e) {
+    return def;
+  }
+}
+
+function crtLabel(on) {
+  return '[ CRT: ' + (on ? 'ON' : 'OFF') + ' ]';
+}
+function starsLabel(on) {
+  return '[ STARS: ' + (on ? 'ON' : 'OFF') + ' ]';
+}
+
+var crtBtn = document.getElementById('dade-toggle-crt');
+var starsBtn = document.getElementById('dade-toggle-stars');
+var crtCanvas = document.getElementById('dade-crt');
+var starCanvas = document.getElementById('dade-starfield');
+
+var crtOn = readBool('crt_enabled', true);
+var starsOn = readBool('stars_enabled', true);
+
+crtBtn.textContent = crtLabel(crtOn);
+starsBtn.textContent = starsLabel(starsOn);
+
+initCRT({ canvas: crtCanvas, enabled: crtOn });
+initStarfield({ canvas: starCanvas });
+
+crtBtn.addEventListener('click', function () {
+  crtOn = !crtOn;
+  setCRTEnabled(crtOn);
+  crtBtn.textContent = crtLabel(crtOn);
+});
+
+starsBtn.addEventListener('click', function () {
+  starsOn = !starsOn;
+  setStarsEnabled(starsOn);
+  starsBtn.textContent = starsLabel(starsOn);
+});
+</script>
 </body>
 </html>

@@ -95,3 +95,52 @@ img {
 .cursor-trail-dot--b {
   background-color: #00ff00;
 }
+
+/* Full-viewport Canvas 2D effects — never intercept scroll or clicks */
+.dade-fx-starfield {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.dade-fx-crt {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.dade-effects-toggles {
+  margin: 0.6em 0 0;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.dade-effect-btn {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 17px;
+  font-weight: bold;
+  text-decoration: underline;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 8px;
+  margin: 0 6px;
+}
+
+.dade-effect-btn--crt {
+  color: #00ff00;
+}
+
+.dade-effect-btn--stars {
+  color: #ff00cc;
+}
+
+.dade-effect-btn:hover {
+  color: #ffff00;
+}
+
+.dade-effect-btn:active {
+  color: #00ffff;
+}
