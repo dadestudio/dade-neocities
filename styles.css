@@ -33,3 +33,8 @@ marquee {
 img {
   vertical-align: middle;
 }
+
+/* Placeholder shell for future status ticker (G3) */
+#status-scroller {
+  min-height: 1.5em;
+}
