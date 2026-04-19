@@ -7,115 +7,30 @@
 <link rel="stylesheet" href="../styles/reset.css">
 <link rel="stylesheet" href="../styles/tokens.css">
 <link rel="stylesheet" href="../styles/theme.css">
-<link rel="stylesheet" href="../styles.css" type="text/css">
+<link rel="stylesheet" href="../styles/layout.css">
 <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
 </head>
 <body bgcolor="#000033" text="#00ff00" link="#ffff00" vlink="#ff00ff" alink="#00ffff">
-
-<canvas id="dade-starfield" class="dade-fx-starfield" aria-hidden="true"></canvas>
-<canvas id="dade-crt" class="dade-fx-crt" aria-hidden="true"></canvas>
-
-<table width="780" border="0" cellspacing="0" cellpadding="0" align="center" summary="page frame">
-<tr>
-<td bgcolor="#ff00cc">
-<marquee behavior="scroll" direction="left" bgcolor="#ffff00">
-<font face="Comic Sans MS, Comic Sans, cursive" size="3" color="#000080"><b>*** ALL ABOUT ME *** READ IT AND WEEP (JK) *** THX 4 VISITING ***</b></font>
-</marquee>
-</td>
-</tr>
-<tr>
-<td align="center" bgcolor="#000080">
-<img src="../images/welcome.gif" width="468" height="60" alt="Welcome to my homepage" border="0">
-</td>
-</tr>
-<tr>
-<td bgcolor="#00ff00">
-
-<table width="100%" border="3" bordercolor="#ffff00" cellspacing="4" cellpadding="8" summary="nav and main">
-<tr valign="top">
-<td width="140" bgcolor="#0000cc">
-
-<font face="Comic Sans MS, Comic Sans, cursive" size="2" color="#ffff00"><b>~ NAV ~</b></font>
-<br><br>
-<font face="Times New Roman, Times, serif" size="2" color="#ffffff">
-<a class="nav-link" href="../index.html"><font color="#ffff00">Home</font></a><br><br>
-<font color="#00ff00"><b>&gt;&gt; About &lt;&lt;</b></font><br><br>
-<a class="nav-link" href="guestbook.html"><font color="#00ffff">Guestbook</font></a><br><br>
-<a class="nav-link" href="links.html"><font color="#ffff00">Links</font></a><br><br>
-<a class="nav-link" href="webring.html"><font color="#ff00ff">Webring</font></a><br><br>
-<a class="nav-link" href="arcade.html"><font color="#00ff00"><b>[ ARCADE ]</b></font></a><br><br>
-<span id="dade-konami-secret"></span>
-</font>
-<br>
-<font face="Comic Sans MS, Comic Sans, cursive" size="1" color="#00ff00">hit counter is --&gt;</font>
-
-</td>
-<td bgcolor="#330066">
-
-<p align="center">
-<a href="../index.html"><img src="../images/back-button.gif" width="120" height="40" alt="&lt;- Back to Home" border="0" loading="lazy"></a>
-<br>
-<font face="Comic Sans MS, Comic Sans, cursive" size="1" color="#ffff00"><b>&lt;- Back to Home</b></font>
-</p>
-
-<font face="Times New Roman, Times, serif" size="4" color="#ffff00"><b>About Me</b></font>
-<p>
-<font face="Times New Roman, Times, serif" size="3" color="#00ff00">
-Howdy! I'm <font color="#ff00ff" size="4"><b>dadeog</b></font>, a time traveler from 1998 who accidentally landed in the future.
-This page is mostly placeholder text while I finish scanning my collection of <font color="#ffff00">CD-ROMs</font>.
-I like loud fonts, tiled stars, and pages that load in under a minute on dial-up.
-</font>
-</p>
-
-<p align="center">
-<picture>
-<source srcset="../images/me.webp" type="image/webp">
-<img src="../images/me.jpg" width="200" height="200" alt="Stand-in portrait (Van Gogh self-portrait, public domain)" border="3" bordercolor="#ff00cc" loading="lazy">
-</picture>
-<br>
-<font face="Comic Sans MS, Comic Sans, cursive" size="2" color="#00ffff">(that's me... or will be when i scan a pix)</font>
-</p>
-
-<font face="Comic Sans MS, Comic Sans, cursive" size="3" color="#ffff00"><b>My Favorite Things</b></font>
-<ul>
-<font face="Times New Roman, Times, serif" size="3" color="#ffffff">
-<li><font color="#ff00ff"><b>Movies:</b></font> The Matrix, Independence Day, Titanic (don't @ me)</li>
-<li><font color="#00ffff"><b>Games:</b></font> Quake II, StarCraft, GoldenEye 007</li>
-<li><font color="#ffff00"><b>Music:</b></font> Spice Girls, Third Eye Blind, Daft Punk Homework on repeat</li>
-</font>
-</ul>
-
-</td>
-</tr>
-</table>
-
-</td>
-</tr>
-<tr>
-<td bgcolor="#ff0099" align="center">
-<div id="status-scroller"></div>
-<br>
-<div id="audio-player">
-<span id="dade-play-audio" class="dade-audio-play" role="button" tabindex="0">[ ♪ PLAY ]</span>
-<select id="track-select" class="dade-track-select" title="Synth track">
-<option value="midi" selected>MIDI</option>
-</select>
-<canvas id="viz" width="320" height="80" class="dade-viz-canvas" aria-hidden="true"></canvas>
-<span id="dade-sfx-toggle" class="dade-sfx-toggle" role="button" tabindex="0">[ SFX: OFF ]</span>
-</div>
-<br>
-<font face="Times New Roman, Times, serif" size="2" color="#ffff00">
-&copy; 1998 dadeog (jk it's <font color="#ffffff">2026</font> but the vibe is 1998)<br>
-<a href="mailto:webmaster@dadeog.neocities.org"><font color="#00ffff">webmaster@dadeog.neocities.org</font></a>
-<br><br>
-<div class="dade-effects-toggles">
-<button type="button" class="dade-effect-btn dade-effect-btn--crt" id="dade-toggle-crt">[ CRT: ON ]</button>
-<button type="button" class="dade-effect-btn dade-effect-btn--stars" id="dade-toggle-stars">[ STARS: ON ]</button>
-</div>
-</font>
-</td>
-</tr>
-</table>
+  <div id="shell">
+    <aside id="sidebar">
+      <h1 class="mono neon" style="font-size: var(--fs-lg); margin-bottom: var(--space-4);">DADEOG</h1>
+      <ul class="nav-list">
+        <li><a href="../index.html">&gt; HOME</a></li>
+        <li><a href="about.html" class="current">&gt; ABOUT</a></li>
+        <li><a href="guestbook.html">&gt; GUESTBOOK</a></li>
+        <li><a href="links.html">&gt; LINKS</a></li>
+        <li><a href="webring.html">&gt; WEBRING</a></li>
+        <li><a href="arcade.html">&gt; ARCADE</a></li>
+        <li id="dade-konami-secret"></li>
+      </ul>
+    </aside>
+    <main id="main">
+      <div class="panel"><h2 class="panel-header">PAGE: about</h2><p>Placeholder, rebuilt in P3/P5.</p></div>
+    </main>
+    <aside id="widgets">
+      <div class="widget"><h2 class="panel-header">WIDGETS</h2><p class="dim">Re-mounted in P5.</p></div>
+    </aside>
+  </div>
 
 <script src="../script.js" defer></script>
 <script type="module">
