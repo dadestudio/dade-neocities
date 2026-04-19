@@ -35,13 +35,13 @@ Commit at QA: ee221f1cd01c294a1d7f5ea56b94048c1704a38d
 - index.html shell sentinel: `id="shell"` count = 1
 
 ## Browser test (Dade fills in post-deploy)
-- Desktop 1440px: PENDING
-- Tablet 1024px: PENDING
-- Mobile 360px: PENDING
-- T2 CRT + STARS toggles persist across refresh: PENDING
-- T3 audio play + visualizer: PENDING
-- T4 Konami injects SECRET link: PENDING
-- Snake + Pong playable end-to-end: PENDING
+- Desktop 1440: PASS
+- Tablet 1024: PASS
+- Mobile 360: PASS after P6.6 fcd4d88 viewport meta fix (was rendering ~980px scaled-down pre-fix)
+- T2 CRT + Starfield: PASS — toggles persist across refresh via localStorage (crt_enabled, stars_enabled)
+- T3 MIDI: PASS — [ ♪ PLAY ] starts MIDI loop, 60fps visualizer animates
+- T4 Konami: PASS — ↑↑↓↓←→←→BA injects [ SECRET ] sidebar link + 3s [ 30 LIVES GRANTED ] banner
+- Snake + Pong: PASS — both playable end-to-end, high scores persist (snake_high, pong_high)
 
 ## Outstanding
 - deploy.sh was missing from the repo at QA start; created during this run
