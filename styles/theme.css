@@ -928,3 +928,95 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   outline: 1px dotted #FFCC33;
   outline-offset: 0;
 }
+
+/* ───────────────────────────────────────────────────────────────────────
+   Main-window titlebar — sprites from titlebar.png (344×87).
+   Active strip: sx=27, sy=0, 275×14.   Inactive strip: sx=27, sy=15.
+   Top-left 27×27 holds the bolt + min/shade/close cluster:
+     bolt active   (0,  0) 9×9    bolt inactive (0,  9) 9×9
+     min  normal   (9,  0) 9×9    min  pressed  (9,  9) 9×9
+     shade normal  (0, 18) 9×9    shade pressed (9, 18) 9×9
+     close normal  (18, 0) 9×9    close pressed (18, 9) 9×9
+   Drawn at canonical main-window coords:
+     bolt   (6,  3)        min  (244, 3)
+     shade  (254, 3)       close (264, 3)
+   The .wa-titlebar element re-paints the active strip on top of main.png
+   so the same 14px row can be swapped active/inactive in a later run by
+   toggling .is-inactive without touching main.png. The wordmark child
+   (sprite-rendered "WINAMP" from text.png) keeps its existing rule
+   above; this block adds the bolt, drag-handle marker, and the three
+   right-side buttons. Click behaviour for min/shade/close is intentionally
+   not wired in this run — they show their pressed sprite on :active and
+   nothing else. */
+#winamp-chrome .wa-titlebar {
+  position: relative;
+  width: 275px;
+  height: 14px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/titlebar.png");
+  background-repeat: no-repeat;
+  background-position: -27px 0;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+/* Future-proof: a later run flips this class to swap active → inactive
+   strip without re-deriving the offset.
+#winamp-chrome .wa-titlebar.is-inactive {
+  background-position: -27px -15px;
+}
+*/
+#winamp-chrome .wa-titlebar > .wa-bolt {
+  display: block;
+  position: absolute;
+  left: 6px;
+  top: 3px;
+  width: 9px;
+  height: 9px;
+  background-image: url("../images/winamp-skin/base-2.91/titlebar.png");
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  pointer-events: none;
+}
+/* Future-proof inactive bolt: background-position: 0 -9px; */
+#winamp-chrome .wa-titlebar > .wa-title[data-role="drag-handle"] {
+  display: block;
+  position: absolute;
+  left: 16px;
+  top: 3px;
+  width: 224px;
+  height: 9px;
+  background: transparent;
+  cursor: move;
+}
+#winamp-chrome .wa-titlebar > .wa-min,
+#winamp-chrome .wa-titlebar > .wa-shade,
+#winamp-chrome .wa-titlebar > .wa-close {
+  display: block;
+  position: absolute;
+  top: 3px;
+  width: 9px;
+  height: 9px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/titlebar.png");
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  cursor: pointer;
+}
+#winamp-chrome .wa-titlebar > .wa-min   { left: 244px; background-position:  -9px   0; }
+#winamp-chrome .wa-titlebar > .wa-shade { left: 254px; background-position:   0  -18px; }
+#winamp-chrome .wa-titlebar > .wa-close { left: 264px; background-position: -18px   0; }
+#winamp-chrome .wa-titlebar > .wa-min:active   { background-position:  -9px  -9px; }
+#winamp-chrome .wa-titlebar > .wa-shade:active { background-position:  -9px -18px; }
+#winamp-chrome .wa-titlebar > .wa-close:active { background-position: -18px  -9px; }
+#winamp-chrome .wa-titlebar > .wa-min:focus-visible,
+#winamp-chrome .wa-titlebar > .wa-shade:focus-visible,
+#winamp-chrome .wa-titlebar > .wa-close:focus-visible {
+  outline: 1px dotted #FFCC33;
+  outline-offset: 0;
+}

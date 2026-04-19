@@ -104,7 +104,13 @@ img {
       <section class="panel" id="now-playing">
         <div id="winamp-stack">
           <div id="winamp-chrome">
-            <div class="wa-titlebar" aria-hidden="true"></div>
+            <div class="wa-titlebar" aria-hidden="true">
+              <span class="wa-bolt" aria-hidden="true"></span>
+              <span class="wa-title" data-role="drag-handle" aria-hidden="true"></span>
+              <button type="button" class="wa-min" aria-label="Minimize"></button>
+              <button type="button" class="wa-shade" aria-label="Windowshade"></button>
+              <button type="button" class="wa-close" aria-label="Close"></button>
+            </div>
             <span class="wa-clutter-vbar" aria-hidden="true">
               <span class="wa-clutter-vbtn" data-clutter="o" tabindex="-1"></span>
               <span class="wa-clutter-vbtn" data-clutter="a" tabindex="-1"></span>

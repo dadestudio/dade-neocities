@@ -371,3 +371,37 @@ off-screen so no thumb is rendered.
   `.wa-monoster` (mono / stereo sprite overlay).
 - Added `.wa-wordmark` child to `.wa-titlebar`, populated with text.png
   glyphs by the sprite-text observer.
+- Added `.wa-bolt`, `.wa-title[data-role="drag-handle"]`, and three
+  sprite-only buttons (`.wa-min`, `.wa-shade`, `.wa-close`) inside
+  `.wa-titlebar` for pixel-perfect titlebar parity with Base 2.91. No
+  click handlers wired this run — buttons render their pressed sprite
+  on `:active` only. Drag, windowshade, and close behaviours land in
+  later replica-sequence steps.
+
+## Titlebar element offsets
+
+Sheet: `images/winamp-skin/base-2.91/titlebar.png` — verified `344 × 87`
+(8-bit colormap PNG). The top-left `27 × 27` block holds the bolt and
+the min / shade / close cluster in three 9 × 9 columns × three 9-tall
+rows. The two long horizontal strips at `sx = 27` are the active
+(`sy = 0`) and inactive (`sy = 15`) titlebar backgrounds; both are
+`275 × 14`. Verified by visual inspection of a 4× upscale of the sheet —
+all rects below match the canonical Webamp / Winamp 2.x sprite map.
+
+| element  | state    | sx | sy | w   | h  | draw-x-on-main | draw-y-on-main |
+| -------- | -------- | -- | -- | --- | -- | -------------- | -------------- |
+| strip    | active   | 27 |  0 | 275 | 14 |   0            |   0            |
+| strip    | inactive | 27 | 15 | 275 | 14 |   0            |   0            |
+| bolt     | active   |  0 |  0 |   9 |  9 |   6            |   3            |
+| bolt     | inactive |  0 |  9 |   9 |  9 |   6            |   3            |
+| minimize | normal   |  9 |  0 |   9 |  9 | 244            |   3            |
+| minimize | pressed  |  9 |  9 |   9 |  9 | 244            |   3            |
+| shade    | normal   |  0 | 18 |   9 |  9 | 254            |   3            |
+| shade    | pressed  |  9 | 18 |   9 |  9 | 254            |   3            |
+| close    | normal   | 18 |  0 |   9 |  9 | 264            |   3            |
+| close    | pressed  | 18 |  9 |   9 |  9 | 264            |   3            |
+
+The drag-handle region (`.wa-title[data-role="drag-handle"]`) is the
+strip area between the bolt's right edge and the minimize button —
+left = 16, top = 3, width = 224, height = 9 inside `#winamp-chrome` —
+marked with `cursor: move` only; no drag wiring this run.
