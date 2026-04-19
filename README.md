@@ -2,6 +2,38 @@
 
 A period-correct 1998 Geocities-style homepage, hand-built for Neocities.
 
+## Deploy
+
+```
+./deploy.sh
+```
+
+The deploy is a **hash-on-deploy** flow. Neocities ignores `_headers`, so
+the only way to bust browser caches on redeploy is filename content-hashing
+(`tokens.css` → `tokens.a1b2c3d4.css`). We do that at deploy time, not in
+the working tree.
+
+Steps (all local, working tree untouched):
+
+1. `deploy.sh` wipes and recreates `./build/`.
+2. `rsync -a` copies the repo into `build/`, excluding `.git`, `.env`,
+   `node_modules`, `scripts/`, `docs/`, `deploy.sh`, `README.md`, etc.
+3. `scripts/hash-assets.sh` content-hashes every `.css` / `.js` under
+   `build/styles/`, `build/audio/`, `build/effects/`, `build/interactive/`
+   (plus `build/scripts/` if present). `build/audio/soundfonts/` and
+   `build/sounds/soundfonts/` are skipped — SoundFont sample files are
+   large, immutable, and not worth re-hashing.
+4. The script rewrites every `.html` in `build/` so references point at
+   the new hashed filenames.
+5. `neocities push --prune .` is run from inside `build/`. `--prune`
+   removes orphaned old-hash files from the server.
+
+Because hashing happens inside `build/` (gitignored), `git status` stays
+clean across deploys. The hashed `build/` dir is an ephemeral deploy
+artifact, not a source of truth.
+
+Requires the `neocities` Ruby CLI and a prior `neocities login`.
+
 ## Assets
 
 | Directory | Contents | Status |
