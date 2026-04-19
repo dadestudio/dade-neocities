@@ -47,7 +47,7 @@ pixelHeight` after BMP → PNG conversion (no resampling).
 | `shufrep.png`  | 92 × 85   | Shuffle / repeat button states                     |
 | `eqmain.png`   | 275 × 315 | EQ window bg (top 116 px) + thumb sprites below    |
 | `eq_ex.png`    | 275 × 82  | Extended EQ sprites (alt UI bits)                  |
-| `pledit.png`   | 280 × 186 | Playlist editor chrome (not used yet)              |
+| `pledit.png`   | 280 × 186 | Playlist editor chrome (titlebar, side strips, bottom, scrollbar) |
 | `playpaus.png` | 42 × 9    | Small play / pause / stop status indicator         |
 
 ## Key sprite coordinates
@@ -168,7 +168,9 @@ of the kbps / kHz / scroller text.
 - Wire the position bar + `posbar.png` to a real seek input (we now
   paint the empty-track region; a thumb sprite at posbar.png x = 248
   would represent live playhead position).
-- Skin the shuffle / repeat toggles from `shufrep.png`.
+- Wire `audio/` so REPEAT-off truly stops after the last track. The
+  audio module's auto-advance lives inside its private rAF tick (mod-N
+  wrap), unreachable from the chrome scope without editing `audio/`.
 
 ## Bitmap font charmap + glyph offsets
 
@@ -594,3 +596,143 @@ The drag-handle region (`.wa-title[data-role="drag-handle"]`) is the
 strip area between the bolt's right edge and the minimize button —
 left = 16, top = 3, width = 224, height = 9 inside `#winamp-chrome` —
 marked with `cursor: move` only; no drag wiring this run.
+
+## Playlist window — base 2.91
+
+The playlist window (`#winamp-pl`) renders as a 275 × 232 sprite-backed
+panel sitting directly underneath `#winamp-eq` inside `#winamp-stack`,
+with no gap and no flex container — vanilla block stacking at 275 px
+width. All chrome paints from `pledit.png` (280 × 186) and
+`shufrep.png` (92 × 85). Sprite coordinates are taken from the
+captbaritone/webamp checked-in `packages/webamp/js/skinSprites.ts`
+(`PLEDIT` + `SHUFREP` blocks) and on-window placement from
+`packages/webamp/css/playlist-window.css` default 275 × 232 layout —
+NOT from `skins.webamp.org` derivatives. Sheet `pledit.png` is
+`280 × 186` and `shufrep.png` is `92 × 85` (8-bit colormap PNG, both
+verified via `file`).
+
+### Sprites used (sheet: `pledit.png` 280 × 186)
+
+| Sprite                                 | sx  | sy  | w   | h  |
+| -------------------------------------- | --- | --- | --- | -- |
+| `PLAYLIST_TOP_LEFT_SELECTED`           | 0   | 0   | 25  | 20 |
+| `PLAYLIST_TITLE_BAR_SELECTED`          | 26  | 0   | 100 | 20 |
+| `PLAYLIST_TOP_TILE_SELECTED`           | 127 | 0   | 25  | 20 |
+| `PLAYLIST_TOP_RIGHT_CORNER_SELECTED`   | 153 | 0   | 25  | 20 |
+| `PLAYLIST_TOP_LEFT_CORNER` (inactive)  | 0   | 21  | 25  | 20 |
+| `PLAYLIST_TITLE_BAR`     (inactive)    | 26  | 21  | 100 | 20 |
+| `PLAYLIST_TOP_TILE`      (inactive)    | 127 | 21  | 25  | 20 |
+| `PLAYLIST_TOP_RIGHT_CORNER` (inactive) | 153 | 21  | 25  | 20 |
+| `PLAYLIST_LEFT_TILE`                   | 0   | 42  | 12  | 29 |
+| `PLAYLIST_RIGHT_TILE`                  | 31  | 42  | 20  | 29 |
+| `PLAYLIST_BOTTOM_LEFT_CORNER`          | 0   | 72  | 125 | 38 |
+| `PLAYLIST_BOTTOM_RIGHT_CORNER`         | 126 | 72  | 150 | 38 |
+| `PLAYLIST_SCROLL_HANDLE`               | 52  | 53  | 8   | 18 |
+| `PLAYLIST_SCROLL_HANDLE_SELECTED`      | 61  | 53  | 8   | 18 |
+| `PLAYLIST_CLOSE_SELECTED`              | 52  | 42  | 9   | 9  |
+
+Inactive titlebar sprites (rows at `sy = 21`) are reserved for a future
+focus / blur swap on `.pl-titlebar.is-inactive`; the active row is
+painted in this run because the playlist always sits inside the focused
+homepage chrome (the page does not lose focus while the widget is
+visible during normal browsing).
+
+### Sprites used (sheet: `shufrep.png` 92 × 85)
+
+`MAIN_REPEAT_BUTTON` family (28 × 15) and `MAIN_SHUFFLE_BUTTON` family
+(47 × 15). Both buttons are 15 px tall — NOT 12 px like the EQ / PL
+clutter further down the same sheet.
+
+| State                                  | REPEAT sprite | SHUFFLE sprite |
+| -------------------------------------- | ------------- | -------------- |
+| normal                                 | `(0, 0)`      | `(28, 0)`      |
+| `:active` (depressed)                  | `(0, 15)`     | `(28, 15)`     |
+| `aria-pressed="true"` (selected)       | `(0, 30)`     | `(28, 30)`     |
+| `aria-pressed="true"` + `:active`      | `(0, 45)`     | `(28, 45)`     |
+
+### On-window placement
+
+Origin (0, 0) is the top-left pixel of `#winamp-pl`. All overlay
+elements are absolutely positioned at the canonical Webamp coordinates
+from `playlist-window.css` (default 275-wide layout):
+
+| Element              | left | top | w   | h   | DOM class                  |
+| -------------------- | ---- | --- | --- | --- | -------------------------- |
+| Titlebar strip       | 0    | 0   | 275 | 20  | `.pl-titlebar`             |
+| Titlebar close       | 263  | 3   | 9   | 9   | `.pl-titlebar-close`       |
+| Title bar (centered) | 87   | 0   | 100 | 20  | `.pl-tb-title-mid`         |
+| Top-left corner      | 0    | 0   | 25  | 20  | `.pl-tb-corner-l`          |
+| Top-right corner     | 250  | 0   | 25  | 20  | `.pl-tb-corner-r`          |
+| Top tile fill (L)    | 25   | 0   | 62  | 20  | `.pl-tb-fill[data-side=l]` |
+| Top tile fill (R)    | 187  | 0   | 63  | 20  | `.pl-tb-fill[data-side=r]` |
+| Left side strip      | 0    | 20  | 12  | 174 | `.pl-side-l`               |
+| Right side strip     | 255  | 20  | 20  | 174 | `.pl-side-r`               |
+| List area            | 12   | 23  | 243 | 168 | `.pl-list`                 |
+| Scrollbar slot       | 260  | 23  | 8   | 168 | `.pl-scrollbar`            |
+| Scrollbar thumb      | 260  | 23+ | 8   | 18  | `.pl-scroll-thumb`         |
+| Bottom strip (L)     | 0    | 194 | 125 | 38  | `.pl-bottom-l`             |
+| Bottom strip (R)     | 125  | 194 | 150 | 38  | `.pl-bottom-r`             |
+| SHUFFLE              | 164  | 209 | 47  | 15  | `.pl-shuffle`              |
+| REPEAT               | 212  | 209 | 28  | 15  | `.pl-repeat`               |
+| Track count          | 8    | 213 | -   | 6   | `.pl-track-count`          |
+| Time display         | 96   | 213 | -   | 6   | `.pl-time-display`         |
+
+Title centering: at the canonical 275 width the webamp flex layout
+resolves to `25 + 50 + 12 + 100 + 13 + 50 + 25 = 275`. Our DOM avoids
+flex and instead positions the 100-wide title sprite at `x = 87`, with
+two `overflow:hidden` fill cells (62 px on the left, 63 px on the
+right) covering the gaps. The 1 px asymmetry between the two fills is
+invisible at 1× zoom; a flex implementation would round to the same
+visual result.
+
+### Tile-fill technique (no CSS gradients, no whole-sheet repeats)
+
+The titlebar gap fills (62 / 63 px wide) and the side strips (174 tall)
+need to repeat a single 25 × 20 / 12 × 29 / 20 × 29 sprite without
+exposing other sprites that share columns / rows on the source sheet.
+Repeating the entire 280 × 186 sheet via `background-repeat` would
+surface adjacent sprite art (e.g. column 0..12 of `pledit.png` contains
+the bottom-left corner art at `y = 72..110` and the ADD URL button at
+`y = 111..129` on top of the left tile at `y = 42..70`).
+
+The fix is to wrap each region in an `overflow: hidden` parent and
+stack N inline-block / block child `<i>` cells, each cell sized to
+exactly one tile worth of pixels with `background-position` selecting
+just that tile. The last cell is clipped by the parent box. This keeps
+every painted pixel inside the desired sprite and preserves bit-for-bit
+fidelity at 1× zoom.
+
+### Behaviour wiring
+
+- Row text rendered through `window.__waRenderText` (text.png 5 × 6).
+- Time + track count rendered through the same helper so the bottom
+  strip stays in the same monospace 5 × 6 sprite font.
+- Double-click on `.pl-row` calls
+  `window.__dadePlayer.setTrackIndex(idx, true)` — the public setter
+  exposed on the player handle and the same code path the audio
+  module's own `next()` and `prev()` handlers go through. The audio
+  graph is reached without any edit to `audio/*` (the public handle is
+  captured in the inline module script via the existing
+  `window.__dadePlayer = initPlayer(...)` line).
+- SHUFFLE intercepts user clicks on `[data-act="next"]` inside
+  `#audio-player-mount` and re-routes to a random unplayed index by
+  calling `setTrackIndex(pick, true)` after the audio module's own
+  `next()` call. The second call wins; `pendingTrack` inside
+  `loadTrack` drops the in-flight first load cleanly.
+- REPEAT toggle persists in `localStorage.pl_repeat` and SHUFFLE in
+  `localStorage.pl_shuffle`. The audio module's auto-advance always
+  loops mod-N (matches REPEAT-on semantics natively); the toggle is
+  visual + persisted, with no way to truly "stop after last" without
+  editing `audio/*`.
+- Scrollbar thumb is functional via mousedown / mousemove on the thumb
+  span. The list scrolls via `transform: translateY(-scrollY)` on
+  `.pl-list-inner` so the native browser scrollbar never appears, and
+  the thumb position is a linear function of `scrollY / maxScroll`.
+- Time display is fed by an `rAF` poll that reads `__lastRawText` off
+  the audio module's `[data-role="time"]` node (set by the existing
+  spriteText IIFE's observer when `audio/player.js` writes
+  `textContent` each frame). The diff-guard re-renders glyphs only
+  when the visible second changes. **No new MutationObservers are
+  created** for the playlist scope, so the existing observer guards
+  (`attachAll` idempotency, EQ-fader guard, LCD glyph guard) remain
+  byte-identical.

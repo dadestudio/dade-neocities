@@ -191,6 +191,32 @@ img {
               </div>
             </div>
           </div>
+          <div id="winamp-pl" hidden>
+            <div class="pl-titlebar" aria-hidden="true">
+              <span class="pl-tb-corner pl-tb-corner-l"></span>
+              <span class="pl-tb-fill" data-side="l"><i></i><i></i><i></i></span>
+              <span class="pl-tb-title-mid"></span>
+              <span class="pl-tb-fill" data-side="r"><i></i><i></i><i></i></span>
+              <span class="pl-tb-corner pl-tb-corner-r"></span>
+              <button type="button" class="pl-titlebar-close" aria-label="close playlist" tabindex="-1"></button>
+            </div>
+            <span class="pl-side pl-side-l" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="pl-side pl-side-r" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <div class="pl-list" role="list">
+              <div class="pl-list-inner"></div>
+            </div>
+            <div class="pl-scrollbar" aria-hidden="true">
+              <span class="pl-scroll-thumb"></span>
+            </div>
+            <div class="pl-bottom" aria-hidden="true">
+              <span class="pl-bottom-l"></span>
+              <span class="pl-bottom-r"></span>
+            </div>
+            <button type="button" class="pl-shuffle" aria-pressed="false" aria-label="shuffle"></button>
+            <button type="button" class="pl-repeat" aria-pressed="false" aria-label="repeat"></button>
+            <span class="pl-time-display" aria-hidden="true"></span>
+            <span class="pl-track-count" aria-hidden="true"></span>
+          </div>
         </div>
       </section>
 
@@ -889,6 +915,260 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
   document.body.addEventListener('click', function () {
     setTimeout(tryHydrate, 0);
   }, { capture: true });
+})();
+
+// Playlist window — sprite-sliced from pledit.png + shufrep.png. Renders
+// the same TRACKS array the audio module is bound to, but never edits
+// audio/ — the row dblclick path calls window.__dadePlayer.setTrackIndex,
+// which is the same setter the audio module exposes for its own next()
+// and prev() handlers (the canonical loadTrack code path).
+//
+// SHUFFLE: persists in localStorage.pl_shuffle. When ON, intercepts the
+// existing #audio-player-mount [data-act="next"] click, lets the audio
+// module's own next() fire (which calls setTrackIndex), then immediately
+// re-routes to a random unplayed index via setTrackIndex(pick, true).
+// pendingTrack inside loadTrack guards the racing fetches so the second
+// call (ours) wins without leaking partial loads.
+//
+// REPEAT: persists in localStorage.pl_repeat. The audio module's auto-
+// advance always wraps mod-N so the on-state matches native behaviour
+// for free; the off-state cannot be implemented without editing audio/
+// (the auto-advance happens inside its own tick loop, not via clicks).
+// Toggle is therefore visual + persisted only.
+//
+// Scrollbar: list scrolls via transform on .pl-list-inner; mouse wheel
+// + thumb drag both update scrollY which is clamped to maxScroll().
+//
+// Time display: rAF-poll reads __lastRawText off the audio module's
+// [data-role="time"] node (set by the existing spriteText IIFE's
+// observer) and rebuilds the playlist time as text.png 5x6 glyphs via
+// window.__waRenderText. No new MutationObservers are created here so
+// none of the existing observer guards (attachAll, EQ-fader, LCD) need
+// to be touched.
+(function playlistInit() {
+  var pl = document.getElementById('winamp-pl');
+  if (!pl) return;
+  var listEl    = pl.querySelector('.pl-list');
+  var listInner = pl.querySelector('.pl-list-inner');
+  var thumbEl   = pl.querySelector('.pl-scroll-thumb');
+  var shuffleBtn = pl.querySelector('.pl-shuffle');
+  var repeatBtn  = pl.querySelector('.pl-repeat');
+  var timeEl  = pl.querySelector('.pl-time-display');
+  var countEl = pl.querySelector('.pl-track-count');
+  var closeBtn = pl.querySelector('.pl-titlebar-close');
+  if (!listEl || !listInner) return;
+
+  var ROW_H = 13;
+  var LIST_H = 168;
+  var THUMB_H = 18;
+
+  var shufOn = false, repOn = false;
+  try {
+    shufOn = localStorage.getItem('pl_shuffle') === 'true';
+    repOn  = localStorage.getItem('pl_repeat')  === 'true';
+  } catch (e) {}
+  shuffleBtn.setAttribute('aria-pressed', shufOn ? 'true' : 'false');
+  repeatBtn.setAttribute('aria-pressed', repOn ? 'true' : 'false');
+
+  var played = new Set();
+
+  function render(el, text) {
+    var fn = window.__waRenderText;
+    if (typeof fn === 'function') fn(el, text);
+    else el.textContent = text;
+  }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  function buildRows() {
+    while (listInner.firstChild) listInner.removeChild(listInner.firstChild);
+    for (var i = 0; i < TRACKS.length; i++) {
+      var t = TRACKS[i];
+      var row = document.createElement('div');
+      row.className = 'pl-row';
+      row.setAttribute('role', 'listitem');
+      row.setAttribute('data-track-idx', String(i));
+      var label = pad2(i + 1) + '. ' + (t.artist || '') + ' - ' + (t.title || '');
+      row.setAttribute('data-raw', label);
+      var span = document.createElement('span');
+      span.className = 'pl-row-text';
+      row.appendChild(span);
+      render(span, label);
+      listInner.appendChild(row);
+    }
+    listInner.style.height = (TRACKS.length * ROW_H) + 'px';
+    updateTrackCount();
+    updateScroll();
+  }
+
+  function setSelected(idx) {
+    var rows = listInner.querySelectorAll('.pl-row');
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.toggle('pl-row-selected', i === idx);
+    }
+  }
+
+  function updateTrackCount() {
+    if (!countEl) return;
+    var label = TRACKS.length + ' TRACKS';
+    countEl.setAttribute('data-raw', label);
+    render(countEl, label);
+  }
+
+  var scrollY = 0;
+  function maxScroll() {
+    var ch = TRACKS.length * ROW_H;
+    return Math.max(0, ch - LIST_H);
+  }
+  function applyScroll() {
+    listInner.style.transform = 'translateY(' + (-scrollY) + 'px)';
+    var maxs = maxScroll();
+    var travel = LIST_H - THUMB_H;
+    var ratio = maxs > 0 ? (scrollY / maxs) : 0;
+    if (thumbEl) {
+      thumbEl.style.top = Math.round(ratio * travel) + 'px';
+      thumbEl.style.visibility = (maxs > 0) ? 'visible' : 'hidden';
+    }
+  }
+  function updateScroll() {
+    var maxs = maxScroll();
+    if (scrollY > maxs) scrollY = maxs;
+    if (scrollY < 0) scrollY = 0;
+    applyScroll();
+  }
+
+  listEl.addEventListener('wheel', function (e) {
+    if (maxScroll() <= 0) return;
+    e.preventDefault();
+    scrollY += e.deltaY;
+    updateScroll();
+  }, { passive: false });
+
+  if (thumbEl) {
+    var dragOffsetY = 0;
+    var dragging = false;
+    function onMove(e) {
+      if (!dragging) return;
+      var rect = thumbEl.parentElement.getBoundingClientRect();
+      var y = e.clientY - rect.top - dragOffsetY;
+      var travel = LIST_H - THUMB_H;
+      if (y < 0) y = 0; if (y > travel) y = travel;
+      var maxs = maxScroll();
+      scrollY = travel > 0 ? (y / travel) * maxs : 0;
+      applyScroll();
+    }
+    function onUp() {
+      dragging = false;
+      thumbEl.classList.remove('is-dragging');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    thumbEl.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      dragging = true;
+      thumbEl.classList.add('is-dragging');
+      var rect = thumbEl.getBoundingClientRect();
+      dragOffsetY = e.clientY - rect.top;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  // Single click selects, double click loads + plays via the canonical
+  // setter exposed on the player handle. setTrackIndex(idx, true) is the
+  // same code path #track-select would invoke if it were wired (it's the
+  // public API audio/player.js exports for next() and prev()), so the
+  // audio graph is reached without any edit to audio/.
+  listInner.addEventListener('click', function (e) {
+    var row = e.target && e.target.closest ? e.target.closest('.pl-row') : null;
+    if (!row) return;
+    var idx = parseInt(row.getAttribute('data-track-idx') || '-1', 10);
+    if (idx >= 0) setSelected(idx);
+  });
+  listInner.addEventListener('dblclick', function (e) {
+    var row = e.target && e.target.closest ? e.target.closest('.pl-row') : null;
+    if (!row) return;
+    var idx = parseInt(row.getAttribute('data-track-idx') || '-1', 10);
+    if (idx < 0) return;
+    setSelected(idx);
+    played.add(idx);
+    var p = window.__dadePlayer;
+    if (p && typeof p.setTrackIndex === 'function') p.setTrackIndex(idx, true);
+  });
+
+  shuffleBtn.addEventListener('click', function () {
+    shufOn = !shufOn;
+    shuffleBtn.setAttribute('aria-pressed', shufOn ? 'true' : 'false');
+    try { localStorage.setItem('pl_shuffle', shufOn ? 'true' : 'false'); } catch (e) {}
+    if (shufOn) played.clear();
+  });
+  repeatBtn.addEventListener('click', function () {
+    repOn = !repOn;
+    repeatBtn.setAttribute('aria-pressed', repOn ? 'true' : 'false');
+    try { localStorage.setItem('pl_repeat', repOn ? 'true' : 'false'); } catch (e) {}
+  });
+
+  if (closeBtn) closeBtn.addEventListener('click', function () {
+    pl.hidden = true;
+    var plBtn = document.getElementById('wa-pl');
+    if (plBtn) plBtn.setAttribute('aria-pressed', 'false');
+  });
+
+  // Sync visibility with the existing wa-pl clutter button (the earlier
+  // inline IIFE only flips aria-pressed; we layer visibility on top
+  // without modifying that closure).
+  var plBtn = document.getElementById('wa-pl');
+  if (plBtn) {
+    function syncVis() {
+      pl.hidden = (plBtn.getAttribute('aria-pressed') !== 'true');
+    }
+    plBtn.addEventListener('click', function () { setTimeout(syncVis, 0); });
+    syncVis();
+  }
+
+  // SHUFFLE intercept on the existing transport NEXT button. Audio's own
+  // next() handler runs first (registered earlier in initPlayer); ours
+  // runs after and re-routes to a random unplayed index. The defer via
+  // setTimeout 0 lets audio's setTrackIndex+loadTrack kick off, then our
+  // setTrackIndex supersedes it; pendingTrack inside loadTrack drops the
+  // first in-flight load cleanly.
+  var mount = document.getElementById('audio-player-mount');
+  if (mount) {
+    mount.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+      if (!btn) return;
+      if (btn.getAttribute('data-act') !== 'next') return;
+      if (!shufOn) return;
+      var p = window.__dadePlayer;
+      if (!p || typeof p.setTrackIndex !== 'function') return;
+      if (played.size >= TRACKS.length) played.clear();
+      var pool = [];
+      for (var i = 0; i < TRACKS.length; i++) if (!played.has(i)) pool.push(i);
+      if (pool.length === 0) return;
+      var pick = pool[Math.floor(Math.random() * pool.length)];
+      played.add(pick);
+      setTimeout(function () { p.setTrackIndex(pick, true); }, 0);
+    });
+  }
+
+  // Time display — rAF poll the audio time node's __lastRawText (set by
+  // the spriteText IIFE's observer when audio writes textContent each
+  // frame). Diff-guard so we only re-render the bottom strip glyphs when
+  // the second changes (audio resolves to whole-seconds via fmtTime).
+  function tickTime() {
+    requestAnimationFrame(tickTime);
+    if (!timeEl) return;
+    var t = document.querySelector('#audio-player-mount [data-role="time"]');
+    var raw = (t && t.__lastRawText) ? t.__lastRawText : '';
+    if (raw === timeEl.__lastRaw) return;
+    timeEl.__lastRaw = raw;
+    var m = raw.match(/^(\d+):(\d{2})/);
+    var label = m ? (m[1] + ':' + m[2]) : '0:00';
+    timeEl.setAttribute('data-raw', label);
+    render(timeEl, label);
+  }
+  requestAnimationFrame(tickTime);
+
+  buildRows();
 })();
 
 initSFX();

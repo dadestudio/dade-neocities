@@ -143,7 +143,7 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
      shufrep.png   92x85      shuffle / repeat button states
      posbar.png    307x10     position-bar track + thumb
      titlebar.png  344x87     alt titlebar variants (focus / shaded)
-     pledit.png    280x186    playlist editor chrome (not used yet)
+     pledit.png    280x186    playlist editor chrome (titlebar, sides, bottom, scrollbar, close)
      eq_ex.png     275x82     extended EQ sprites
      playpaus.png  42x9       small play/pause/stop status indicator
 
@@ -1394,4 +1394,324 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
 #winamp-chrome .wa-titlebar > .wa-close:focus-visible {
   outline: 1px dotted #FFCC33;
   outline-offset: 0;
+}
+
+/* ----------------------------------------------------------------------
+   Playlist window — sprite-sliced from pledit.png (280×186) and
+   shufrep.png (92×85). Coordinates per webamp/js/skinSprites.ts PLEDIT
+   + SHUFREP blocks; on-window placement per webamp/css/playlist-window.css
+   default 275×232 layout.
+
+   Tile-fill technique: every region that has to repeat a single source
+   sprite (titlebar gap fills, side strips) is wrapped in an
+   overflow:hidden parent with N inline-block / block child <i> cells,
+   each cell sized exactly to one tile. The last cell is clipped by the
+   parent box. Repeating the whole sheet via background-repeat would
+   surface adjacent sprites that share columns/rows on the source sheet;
+   the overflow + child-cell pattern keeps every painted pixel inside
+   the desired sprite. Zero CSS gradients live inside this scope; all
+   bevels / chrome art are baked into the source bitmaps. No font-family
+   declaration either — every visible text inside #winamp-pl is rendered
+   as text.png 5×6 sprite glyphs by the inline playlistInit IIFE via
+   window.__waRenderText.
+   ---------------------------------------------------------------------- */
+#winamp-pl {
+  position: relative;
+  width: 275px;
+  height: 232px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  user-select: none;
+}
+#winamp-pl[hidden] { display: none; }
+
+/* Titlebar — 275×20 painted from PLEDIT active sprites:
+     PLAYLIST_TOP_LEFT_SELECTED            (  0,  0, 25, 20) at x=0
+     PLAYLIST_TOP_TILE_SELECTED            (127,  0, 25, 20) tiled across gaps
+     PLAYLIST_TITLE_BAR_SELECTED           ( 26,  0, 100, 20) centered at x=87
+     PLAYLIST_TOP_RIGHT_CORNER_SELECTED    (153,  0, 25, 20) at x=250
+     PLAYLIST_CLOSE_SELECTED               ( 52, 42,  9,  9) close button */
+#winamp-pl .pl-titlebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 275px;
+  height: 20px;
+}
+#winamp-pl .pl-tb-corner {
+  position: absolute;
+  top: 0;
+  width: 25px;
+  height: 20px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-pl .pl-tb-corner-l { left: 0;     background-position:    0    0; }
+#winamp-pl .pl-tb-corner-r { left: 250px; background-position: -153px   0; }
+#winamp-pl .pl-tb-title-mid {
+  position: absolute;
+  left: 87px;
+  top: 0;
+  width: 100px;
+  height: 20px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-position: -26px 0;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-pl .pl-tb-fill {
+  position: absolute;
+  top: 0;
+  height: 20px;
+  display: block;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+}
+#winamp-pl .pl-tb-fill[data-side="l"] { left:  25px; width: 62px; }
+#winamp-pl .pl-tb-fill[data-side="r"] { left: 187px; width: 63px; }
+#winamp-pl .pl-tb-fill > i {
+  display: inline-block;
+  width: 25px;
+  height: 20px;
+  vertical-align: top;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-position: -127px 0;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-pl .pl-titlebar-close {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 9px;
+  height: 9px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-position: -52px -42px;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+/* Side strips — middle area y=20..194 (174 tall). Left=12 wide tile
+   (PLAYLIST_LEFT_TILE  0, 42, 12, 29); right=20 wide tile
+   (PLAYLIST_RIGHT_TILE 31, 42, 20, 29). Six block child <i> cells stack
+   vertically (6 × 29 = 174); last cell clipped by overflow:hidden. */
+#winamp-pl .pl-side {
+  position: absolute;
+  top: 20px;
+  height: 174px;
+  display: block;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+}
+#winamp-pl .pl-side-l { left: 0;     width: 12px; }
+#winamp-pl .pl-side-r { left: 255px; width: 20px; }
+#winamp-pl .pl-side > i {
+  display: block;
+  width: 100%;
+  height: 29px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-pl .pl-side-l > i { background-position:    0  -42px; }
+#winamp-pl .pl-side-r > i { background-position: -31px -42px; }
+
+/* Bottom strip — y=194..232 (38 tall). Two non-tiled halves:
+     PLAYLIST_BOTTOM_LEFT_CORNER  (  0, 72, 125, 38) at x=0
+     PLAYLIST_BOTTOM_RIGHT_CORNER (126, 72, 150, 38) at x=125 */
+#winamp-pl .pl-bottom {
+  position: absolute;
+  left: 0;
+  top: 194px;
+  width: 275px;
+  height: 38px;
+}
+#winamp-pl .pl-bottom-l,
+#winamp-pl .pl-bottom-r {
+  position: absolute;
+  top: 0;
+  height: 38px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-pl .pl-bottom-l { left:   0; width: 125px; background-position:    0  -72px; }
+#winamp-pl .pl-bottom-r { left: 125px; width: 150px; background-position: -126px -72px; }
+
+/* List area — between the side strips with 3px top padding so the first
+   row lines up with the titlebar's bottom recess (matches webamp's
+   .playlist-middle-center `padding: 3px 0`). The inner wrapper drives
+   scroll via translateY; the parent clips. */
+#winamp-pl .pl-list {
+  position: absolute;
+  left: 12px;
+  top: 23px;
+  width: 243px;
+  height: 168px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: #000000;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  cursor: default;
+}
+#winamp-pl .pl-list-inner {
+  position: relative;
+  width: 100%;
+  will-change: transform;
+}
+#winamp-pl .pl-row {
+  position: relative;
+  height: 13px;
+  margin: 0;
+  padding: 0 3px;
+  font-size: 0;
+  line-height: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+}
+#winamp-pl .pl-row-selected {
+  background-color: #002A5C;
+}
+#winamp-pl .pl-row .pl-row-text { display: inline-block; }
+
+/* Scrollbar — 8 wide thumb sliding inside the right-tile groove. The
+   right tile (bg position -31, -42) bakes the empty groove into the
+   side strip at element x=255+5=260. Thumb sprite 8x18 from
+   PLAYLIST_SCROLL_HANDLE (52, 53). Selected (drag) variant at (61, 53). */
+#winamp-pl .pl-scrollbar {
+  position: absolute;
+  left: 260px;
+  top: 23px;
+  width: 8px;
+  height: 168px;
+  background: transparent;
+  pointer-events: none;
+}
+#winamp-pl .pl-scroll-thumb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 18px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-position: -52px -53px;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  cursor: ns-resize;
+  pointer-events: auto;
+}
+#winamp-pl .pl-scroll-thumb.is-dragging,
+#winamp-pl .pl-scroll-thumb:active {
+  background-position: -61px -53px;
+}
+
+/* SHUFFLE / REPEAT sprite states from shufrep.png (92×85). Both buttons
+   are 15 tall (NOT 12 like the EQ/PL clutter further down the same
+   sheet). aria-pressed="true" selects the lit row; :active selects the
+   pressed row. Position in the bottom-right region of the playlist. */
+#winamp-pl .pl-shuffle,
+#winamp-pl .pl-repeat {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/shufrep.png");
+  background-repeat: no-repeat;
+  background-size: 92px 85px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  cursor: pointer;
+  overflow: hidden;
+}
+#winamp-pl .pl-shuffle { left: 164px; top: 209px; width: 47px; height: 15px; }
+#winamp-pl .pl-repeat  { left: 212px; top: 209px; width: 28px; height: 15px; }
+#winamp-pl .pl-shuffle                              { background-position: -28px   0; }
+#winamp-pl .pl-shuffle:active                       { background-position: -28px -15px; }
+#winamp-pl .pl-shuffle[aria-pressed="true"]         { background-position: -28px -30px; }
+#winamp-pl .pl-shuffle[aria-pressed="true"]:active  { background-position: -28px -45px; }
+#winamp-pl .pl-repeat                               { background-position:    0    0; }
+#winamp-pl .pl-repeat:active                        { background-position:    0  -15px; }
+#winamp-pl .pl-repeat[aria-pressed="true"]          { background-position:    0  -30px; }
+#winamp-pl .pl-repeat[aria-pressed="true"]:active   { background-position:    0  -45px; }
+
+#winamp-pl .pl-titlebar-close:focus-visible,
+#winamp-pl .pl-shuffle:focus-visible,
+#winamp-pl .pl-repeat:focus-visible {
+  outline: 1px dotted #FFCC33;
+  outline-offset: 0;
+}
+
+/* Time + track count — text.png 5×6 glyphs via window.__waRenderText.
+   Positioned inside the bottom-strip region (y >= 194). The shared
+   .sprite-glyph + .sprite-text rules (defined further up) paint each
+   character cell from text.png. */
+#winamp-pl .pl-time-display {
+  position: absolute;
+  left: 96px;
+  top: 213px;
+  height: 6px;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  white-space: nowrap;
+}
+#winamp-pl .pl-track-count {
+  position: absolute;
+  left: 8px;
+  top: 213px;
+  height: 6px;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  white-space: nowrap;
 }
