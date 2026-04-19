@@ -424,7 +424,7 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
 #winamp-chrome #audio-player-mount .player-controls .btn[data-act="play"]  { background-position: -23px 0; }
 #winamp-chrome #audio-player-mount .player-controls .btn[data-act="pause"] { background-position: -46px 0; }
 #winamp-chrome #audio-player-mount .player-controls .btn[data-act="stop"]  { background-position: -69px 0; }
-#winamp-chrome #audio-player-mount .player-controls .btn[data-act="next"]  { width: 22px; background-position: -92px 0; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="next"]  { background-position: -92px 0; }
 #winamp-chrome #audio-player-mount .player-controls .btn[data-act="prev"]:active  { background-position:    0px -18px; }
 #winamp-chrome #audio-player-mount .player-controls .btn[data-act="play"]:active  { background-position: -23px -18px; }
 #winamp-chrome #audio-player-mount .player-controls .btn[data-act="pause"]:active { background-position: -46px -18px; }
@@ -432,43 +432,6 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
 #winamp-chrome #audio-player-mount .player-controls .btn[data-act="next"]:active  { background-position: -92px -18px; }
 #winamp-chrome #audio-player-mount .player-controls .btn:hover { background-color: transparent; }
 #winamp-chrome #audio-player-mount .player-controls .btn:focus-visible {
-  outline: 1px dotted #FFCC33;
-  outline-offset: 0;
-}
-
-/* Eject button — audio/player.js does not emit one (architecture lock),
-   so the eject sprite is overlaid as a separate <button class="wa-eject">
-   inside #winamp-chrome at the canonical webamp coords (left=136, top=89,
-   22x16). Sprite frame is 22x16 (not 18 like the prev/play/pause/stop/next
-   row) and sits at sx=114 in cbuttons.png; pressed sprite at sy=16. */
-#winamp-chrome .wa-eject {
-  position: absolute;
-  left: 136px;
-  top: 89px;
-  width: 22px;
-  height: 16px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background-color: transparent;
-  background-image: url("../images/winamp-skin/base-2.91/cbuttons.png");
-  background-repeat: no-repeat;
-  background-size: 136px 36px;
-  background-position: -114px 0;
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-  font-size: 0;
-  line-height: 0;
-  color: transparent;
-  text-indent: -9999px;
-  overflow: hidden;
-  cursor: pointer;
-}
-#winamp-chrome .wa-eject:active {
-  background-image: url("../images/winamp-skin/base-2.91/cbuttons.png");
-  background-position: -114px -16px;
-}
-#winamp-chrome .wa-eject:focus-visible {
   outline: 1px dotted #FFCC33;
   outline-offset: 0;
 }
@@ -544,9 +507,9 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
 }
 
 /* Balance slider — sprite balance.png at canonical x=177, y=57 (38x14).
-   Frame index = round(|balance| * 27). The active 38px region inside
-   the 68px sheet starts at sx=9 (per webamp/js/skinSprites.ts BALANCE
-   MAIN_BALANCE_BACKGROUND), so background-position-x is -9px. */
+   Frame index = round(|balance| * 27). The sprite is 68px wide but the
+   active 38px area is centered, so the rendered slider is 38 wide with
+   the bg shifted left by 15px to expose the active region. */
 #winamp-chrome #audio-player-mount input[type="range"].bal {
   position: absolute;
   left: 177px;
@@ -561,7 +524,7 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   background-color: transparent;
   background-image: url("../images/winamp-skin/base-2.91/balance.png");
   background-repeat: no-repeat;
-  background-position: -9px calc(var(--bal-frame, 0) * -15px);
+  background-position: -15px calc(var(--bal-frame, 0) * -15px);
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   cursor: ew-resize;
@@ -796,121 +759,6 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
 }
-
-/* Position-bar input — overlays .wa-posbar at the same canonical rect.
-   audio/player.js exposes no seek API, so the input is decorative
-   (pointer-events: none below). The runnable-track paints the empty
-   crop sprite (0, 0, 248, 10) from posbar.png; the thumb (29x10 from
-   posbar.png at sx=248 normal, sx=278 pressed) is gated on
-   body.track-loaded so it only renders once the user has hit play. */
-#winamp-chrome input[type="range"][data-role="posbar"] {
-  position: absolute;
-  left: 16px;
-  top: 72px;
-  width: 248px;
-  height: 10px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  pointer-events: none;
-  cursor: default;
-}
-#winamp-chrome input[type="range"][data-role="posbar"]::-webkit-slider-runnable-track {
-  width: 248px;
-  height: 10px;
-  border: 0;
-  background-color: transparent;
-  background-image: url("../images/winamp-skin/base-2.91/posbar.png");
-  background-repeat: no-repeat;
-  background-position: 0 0;
-  background-size: 307px 10px;
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-}
-#winamp-chrome input[type="range"][data-role="posbar"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 29px;
-  height: 10px;
-  margin-top: 0;
-  border: 0;
-  background-color: transparent;
-  background-image: url("../images/winamp-skin/base-2.91/posbar.png");
-  background-repeat: no-repeat;
-  background-position: -248px 0;
-  background-size: 307px 10px;
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-  visibility: hidden;
-}
-#winamp-chrome input[type="range"][data-role="posbar"]:active::-webkit-slider-thumb {
-  background-position: -278px 0;
-}
-#winamp-chrome input[type="range"][data-role="posbar"]::-moz-range-track {
-  width: 248px;
-  height: 10px;
-  border: 0;
-  background-color: transparent;
-  background-image: url("../images/winamp-skin/base-2.91/posbar.png");
-  background-repeat: no-repeat;
-  background-position: 0 0;
-  background-size: 307px 10px;
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-}
-#winamp-chrome input[type="range"][data-role="posbar"]::-moz-range-thumb {
-  width: 29px;
-  height: 10px;
-  border: 0;
-  background-color: transparent;
-  background-image: url("../images/winamp-skin/base-2.91/posbar.png");
-  background-repeat: no-repeat;
-  background-position: -248px 0;
-  background-size: 307px 10px;
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-  visibility: hidden;
-}
-#winamp-chrome input[type="range"][data-role="posbar"]:active::-moz-range-thumb {
-  background-position: -278px 0;
-}
-body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-webkit-slider-thumb {
-  visibility: visible;
-}
-body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-range-thumb {
-  visibility: visible;
-}
-
-/* Slider tooltips — bitmap-font glyph rows rendered above the volume
-   and balance sliders by the inline IIFE in index.html. Visible only
-   while the slider is hovered or focused (the IIFE removes the
-   `hidden` attribute on pointerenter/focus). Position is absolute
-   inside #winamp-chrome at the canonical x of each slider, top=43
-   (~14 px above the slider track at top=57). The element itself only
-   provides positioning + clipping; glyph cells inside come from the
-   shared .sprite-text class (text.png 5x6 cells). */
-#winamp-chrome .wa-tooltip {
-  position: absolute;
-  top: 43px;
-  height: 6px;
-  display: block;
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  font-size: 0;
-  line-height: 0;
-  color: transparent;
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 2;
-}
-#winamp-chrome .wa-tooltip[hidden] { display: none; }
-#winamp-chrome .wa-tooltip[data-tip-for="vol"] { left: 107px; width: 100px; }
-#winamp-chrome .wa-tooltip[data-tip-for="bal"] { left: 130px; width: 130px; }
 /* SFX toggle moved to the right-sidebar #fx-toggles-mount widget so it
    sits next to CRT + STARS as a third .btn sibling. The element keeps
    its byte-identical id+class so the inline wiring (and audio/sfx.js
