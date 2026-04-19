@@ -1,0 +1,40 @@
+:root {
+  /* palette - dark retro-tech */
+  --bg: #0a0e14;
+  --bg-elev: #12171f;
+  --panel: #1a2230;
+  --panel-border: #2a3547;
+  --ink: #d6e1f0;
+  --ink-dim: #8a97ad;
+  --accent-neon: #00ff9f;
+  --accent-cyan: #00d9ff;
+  --accent-amber: #ffb454;
+  --accent-magenta: #ff2e88;
+  --danger: #ff5277;
+
+  /* spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* radii */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* typography */
+  --font-mono: "VT323", "Courier New", Courier, monospace;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --fs-xs: 12px;
+  --fs-sm: 14px;
+  --fs-base: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 28px;
+
+  /* chrome */
+  --shadow-panel: 0 0 0 1px var(--panel-border), 0 2px 0 #000;
+  --glow-neon: 0 0 6px var(--accent-neon);
+}
