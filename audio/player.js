@@ -46,7 +46,16 @@ const LS_VOL = 'lofi_volume';
 const LS_IDX = 'lofi_track';
 const SF_HOST = 'FluidR3_GM';
 const FALLBACK_INST = 'acoustic_grand_piano';
+const PERCUSSION_INST = 'percussion';
 const SCHED_LOOKAHEAD = 0.5;
+
+// GM channel-9 percussion: MIDI note number IS the drum voice (35=Bass Drum,
+// 38=Snare, 42=Closed HH, 49=Crash, etc.) — there is no Program Change lookup.
+// The bundled FluidR3 percussion sample set covers MIDI 27-87 (Eb1..Eb6); GM
+// standard kit lives at 35-81. Notes outside the bundle range are silently
+// dropped at schedule time (warned once) — no pitched-piano fallback for drums.
+const PERCUSSION_MIDI_LO = 27;
+const PERCUSSION_MIDI_HI = 87;
 
 function lsGetNum(k, d) {
   try { const v = parseFloat(localStorage.getItem(k)); return isFinite(v) ? v : d; } catch (_) { return d; }
@@ -133,7 +142,7 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
   }
 
   function programNameFor(track) {
-    if (track.channel === 9) return 'synth_drum';
+    if (track.channel === 9) return PERCUSSION_INST;
     const p = (track.instrument && track.instrument.number) || 0;
     return GM_NAMES[Math.max(0, Math.min(127, p))];
   }
@@ -146,8 +155,16 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
       nameToUrl: (n, sf) => `/sounds/soundfonts/${sf}/${n}-mp3.js`,
       destination: masterGain,
     };
+    const isPerc = name === PERCUSSION_INST;
     const p = Soundfont.instrument(ctx, name, opts)
       .catch((err) => {
+        if (isPerc) {
+          // Drum kit MUST NOT fall back to a pitched piano — that would emit
+          // wrong-pitched melodic noise on every drum hit. Re-raise so the
+          // whole percussion track is dropped cleanly.
+          console.warn('player: percussion kit unavailable, channel 9 will be silent', err);
+          throw err;
+        }
         if (name === FALLBACK_INST) throw err;
         console.warn('player: ' + name + ' unavailable, falling back to ' + FALLBACK_INST, err);
         return Soundfont.instrument(ctx, FALLBACK_INST, opts);
@@ -168,26 +185,51 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
     const buf = await fetch(tr.src).then((r) => { if (!r.ok) throw new Error('mid 404 ' + tr.src); return r.arrayBuffer(); });
     if (pendingTrack !== idx) return null;
     const midi = new Midi(buf);
-    const playable = midi.tracks.filter((t) => t.notes && t.notes.length && t.channel !== 9);
+    // Keep channel 9 in scope — it carries the GM drum kit and was excluded
+    // by T9.1. Percussion is loaded as the 'percussion' instrument and routed
+    // by note number rather than program number (handled in scheduleAhead).
+    const playable = midi.tracks.filter((t) => t.notes && t.notes.length);
     const names = Array.from(new Set(playable.map(programNameFor)));
     let loaded = 0;
     if (ui.loading) ui.loading.textContent = '[ loading soundfonts... 0/' + names.length + ' ]';
     const insts = await Promise.all(names.map(async (n) => {
-      const inst = await ensureInstrument(n);
-      loaded += 1;
-      if (ui.loading && pendingTrack === idx) ui.loading.textContent = '[ loading soundfonts... ' + loaded + '/' + names.length + ' ]';
-      return [n, inst];
+      try {
+        const inst = await ensureInstrument(n);
+        loaded += 1;
+        if (ui.loading && pendingTrack === idx) ui.loading.textContent = '[ loading soundfonts... ' + loaded + '/' + names.length + ' ]';
+        return [n, inst];
+      } catch (e) {
+        // Per-instrument load failure: log and skip this track. Percussion
+        // takes this branch when the kit bundle is absent so the rest of the
+        // mix still plays.
+        console.warn('player: skipping instrument', n, e);
+        loaded += 1;
+        if (ui.loading && pendingTrack === idx) ui.loading.textContent = '[ loading soundfonts... ' + loaded + '/' + names.length + ' ]';
+        return [n, null];
+      }
     }));
     if (pendingTrack !== idx) return null;
     const nameMap = new Map(insts);
     parsedMidi = midi;
-    trackInstruments = playable.map((t) => ({ inst: nameMap.get(programNameFor(t)), notes: t.notes }));
+    trackInstruments = playable.map((t) => ({
+      inst: nameMap.get(programNameFor(t)),
+      notes: t.notes,
+      isDrum: t.channel === 9,
+    }));
     totalDur = midi.duration || playable.reduce((m, t) => Math.max(m, t.notes.reduce((mm, n) => Math.max(mm, n.time + n.duration), 0)), 0);
     noteList = [];
     for (let i = 0; i < trackInstruments.length; i++) {
       const ti = trackInstruments[i];
       for (const n of ti.notes) {
-        noteList.push({ time: n.time, duration: n.duration, name: n.name, velocity: n.velocity || 0.7, instIdx: i });
+        noteList.push({
+          time: n.time,
+          duration: n.duration,
+          name: n.name,
+          midi: n.midi,
+          velocity: n.velocity || 0.7,
+          instIdx: i,
+          isDrum: ti.isDrum,
+        });
       }
     }
     noteList.sort((a, b) => a.time - b.time);
@@ -214,15 +256,37 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
       noteCursor++;
       const ti = trackInstruments[n.instIdx];
       if (!ti || !ti.inst) continue;
-      const dur = Math.max(0.05, n.duration - Math.max(0, offsetSec - n.time));
+      const startAt = Math.max(when, ctx.currentTime);
       try {
-        const node = ti.inst.play(n.name, Math.max(when, ctx.currentTime), { duration: dur, gain: Math.max(0.05, n.velocity) });
+        let node;
+        if (n.isDrum) {
+          // GM percussion: each MIDI note number is a distinct drum voice
+          // resolved out of the 'percussion' bundle by note name. Drums
+          // play to natural decay (no duration cap) and are silently
+          // dropped if outside the bundled kit range — never fall back
+          // to a pitched piano sample.
+          if (n.midi < PERCUSSION_MIDI_LO || n.midi > PERCUSSION_MIDI_HI) {
+            warnMissingDrum(n.midi);
+            continue;
+          }
+          node = ti.inst.play(n.name, startAt, { gain: Math.max(0.05, n.velocity) });
+        } else {
+          const dur = Math.max(0.05, n.duration - Math.max(0, offsetSec - n.time));
+          node = ti.inst.play(n.name, startAt, { duration: dur, gain: Math.max(0.05, n.velocity) });
+        }
         if (node) activeNotes.push(node);
       } catch (e) {
         if (!scheduleErrorLogged) { console.error('player: note schedule error', e); scheduleErrorLogged = true; }
       }
     }
     if (activeNotes.length > 256) activeNotes = activeNotes.slice(-128);
+  }
+
+  const missingDrumWarned = new Set();
+  function warnMissingDrum(midi) {
+    if (missingDrumWarned.has(midi)) return;
+    missingDrumWarned.add(midi);
+    console.warn('player: drop drum note ' + midi + ' (outside FluidR3 percussion kit range ' + PERCUSSION_MIDI_LO + '-' + PERCUSSION_MIDI_HI + ')');
   }
 
   function stopAllNotes() {
