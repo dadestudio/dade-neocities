@@ -117,3 +117,122 @@
 .player-controls .btn { padding: 2px 8px; min-width: 32px; text-align: center; }
 input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: var(--accent-neon); }
 .sf-loading { color: var(--ink-dim); font-size: var(--fs-xs); margin-top: var(--space-1); }
+
+/* T12 — Winamp 2 chrome skin (scoped to #winamp-chrome to prevent bleed) */
+#winamp-chrome {
+  --wa-base: #3a4a6a;
+  --wa-hi: #6a7a9a;
+  --wa-shadow: #1a2230;
+  --wa-text: #d6e1f0;
+  --wa-accent: #ffb454;
+  background: var(--wa-base);
+  border: 2px outset var(--wa-hi);
+  padding: 2px;
+  font-family: var(--font-mono);
+  color: var(--wa-text);
+  font-size: var(--fs-xs);
+  line-height: 1;
+}
+#winamp-chrome .wa-titlebar {
+  height: 14px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  background: linear-gradient(to bottom, var(--wa-hi) 0%, var(--wa-base) 50%, var(--wa-shadow) 100%);
+  border: 1px outset var(--wa-hi);
+  color: var(--wa-text);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  user-select: none;
+}
+#winamp-chrome .wa-glyph {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  line-height: 10px;
+  text-align: center;
+  background: var(--wa-base);
+  border: 1px outset var(--wa-hi);
+  color: var(--wa-text);
+  font-size: 9px;
+  cursor: default;
+}
+#winamp-chrome .wa-title {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--wa-text);
+  text-shadow: 1px 1px 0 var(--wa-shadow);
+}
+#winamp-chrome .wa-bolt {
+  color: var(--wa-accent);
+  font-size: 11px;
+  text-shadow: 0 0 4px var(--wa-accent);
+}
+#winamp-chrome .wa-readout {
+  height: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  margin-top: 2px;
+  background: var(--wa-shadow);
+  border: 1px inset var(--wa-hi);
+  color: var(--wa-accent);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+#winamp-chrome .wa-bitrate,
+#winamp-chrome .wa-srate,
+#winamp-chrome .wa-channels {
+  color: var(--wa-accent);
+  text-shadow: 0 0 2px rgba(255, 180, 84, 0.4);
+}
+#winamp-chrome #audio-player-mount {
+  margin-top: 2px;
+  padding: 4px;
+  background: var(--wa-base);
+  border: 1px inset var(--wa-hi);
+}
+#winamp-chrome .wa-clutter-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  margin-top: 2px;
+  background: var(--wa-base);
+  border: 1px outset var(--wa-hi);
+}
+#winamp-chrome .wa-clutter {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wa-base);
+  color: var(--wa-text);
+  border: 1px outset var(--wa-hi);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+#winamp-chrome .wa-clutter:active,
+#winamp-chrome .wa-clutter[aria-pressed="true"] {
+  border: 1px inset var(--wa-hi);
+  background: var(--wa-shadow);
+  color: var(--wa-accent);
+}
+#winamp-chrome .wa-clutter:focus-visible {
+  outline: 1px dotted var(--wa-accent);
+  outline-offset: 1px;
+}
