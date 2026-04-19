@@ -168,9 +168,6 @@ of the kbps / kHz / scroller text.
 - Wire the position bar + `posbar.png` to a real seek input (we now
   paint the empty-track region; a thumb sprite at posbar.png x = 248
   would represent live playhead position).
-- Wire `audio/` so REPEAT-off truly stops after the last track. The
-  audio module's auto-advance lives inside its private rAF tick (mod-N
-  wrap), unreachable from the chrome scope without editing `audio/`.
 
 ## Bitmap font charmap + glyph offsets
 
@@ -720,10 +717,28 @@ fidelity at 1× zoom.
   `next()` call. The second call wins; `pendingTrack` inside
   `loadTrack` drops the in-flight first load cleanly.
 - REPEAT toggle persists in `localStorage.pl_repeat` and SHUFFLE in
-  `localStorage.pl_shuffle`. The audio module's auto-advance always
-  loops mod-N (matches REPEAT-on semantics natively); the toggle is
-  visual + persisted, with no way to truly "stop after last" without
-  editing `audio/*`.
+  `localStorage.pl_shuffle`. Auto-advance behaviour is now functional
+  via a **capture-phase `ended` shim** installed at the chrome layer on
+  the `<audio>` element inside `#audio-player-mount` (see
+  `installPlEndedShim` IIFE in `index.html`). The shim runs before the
+  audio module's own bubble-phase `ended` listener and uses
+  `stopImmediatePropagation()` to suppress the internal mod-N wrap on
+  two paths:
+  - **REPEAT off + last track**: shim calls `audio.pause()` and stops
+    propagation, so playback halts at the end of the final track instead
+    of wrapping to track 0 (matches native Winamp behaviour).
+  - **SHUFFLE on**: shim picks a random index `!= current` from `TRACKS`,
+    calls `window.__dadePlayer.setTrackIndex(pick, true)`, and stops
+    propagation so the auto-advance lands on a random track instead of
+    `(current + 1) % N`.
+  - **REPEAT on, non-last track, or SHUFFLE off**: shim is a no-op; the
+    audio module's existing handler runs and wraps mod-N as before.
+  Current index is resolved via `window.__dadePlayer.getTrackIndex()` /
+  `.trackIndex` if the handle exposes them, otherwise by matching
+  `audio.currentSrc` against `TRACKS[i].src`. The shim is double-install
+  guarded via `audio.__plEndedShimInstalled = true` and the audio graph
+  is byte-identical: only `audio.pause()` and the existing public
+  `setTrackIndex()` setter are called — no edits under `audio/*`.
 - Scrollbar thumb is functional via mousedown / mousemove on the thumb
   span. The list scrolls via `transform: translateY(-scrollY)` on
   `.pl-list-inner` so the native browser scrollbar never appears, and

@@ -1171,6 +1171,72 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
   buildRows();
 })();
 
+// REPEAT off-state + SHUFFLE auto-advance shim. The audio module's own
+// 'ended' handler (registered inside audio/player.js) always wraps the
+// playlist mod-N, which is correct for REPEAT-on but wrong for the off
+// state and ignores the chrome's SHUFFLE toggle. Editing audio/ is
+// locked, so we install a CAPTURE-phase 'ended' listener at the chrome
+// layer; capture runs before the module's bubble-phase listener and
+// stopImmediatePropagation() suppresses the internal mod-N wrap on the
+// same target. Audio graph stays frozen — we only call pause() and the
+// existing public setTrackIndex() setter.
+(function installPlEndedShim() {
+  var mount = document.getElementById('audio-player-mount');
+  if (!mount) return;
+  function tryInstall() {
+    var audio = mount.querySelector('audio');
+    if (!audio) { requestAnimationFrame(tryInstall); return; }
+    if (audio.__plEndedShimInstalled) return;
+    audio.__plEndedShimInstalled = true;
+
+    function readBoolLS(k) {
+      try { return localStorage.getItem(k) === 'true'; } catch (e) { return false; }
+    }
+    function currentIdx() {
+      var p = window.__dadePlayer;
+      if (p) {
+        if (typeof p.getTrackIndex === 'function') {
+          var gi = p.getTrackIndex();
+          if (typeof gi === 'number' && gi >= 0) return gi;
+        }
+        if (typeof p.trackIndex === 'number' && p.trackIndex >= 0) return p.trackIndex;
+      }
+      var src = audio.currentSrc || audio.src || '';
+      try { src = decodeURIComponent(src); } catch (e) {}
+      for (var i = 0; i < TRACKS.length; i++) {
+        if (src.indexOf(TRACKS[i].src) !== -1) return i;
+      }
+      return -1;
+    }
+
+    audio.addEventListener('ended', function (ev) {
+      var shuf = readBoolLS('pl_shuffle');
+      var rep  = readBoolLS('pl_repeat');
+      var idx  = currentIdx();
+      var p    = window.__dadePlayer;
+
+      if (shuf && p && typeof p.setTrackIndex === 'function' && TRACKS.length > 0) {
+        var pick;
+        if (TRACKS.length === 1) {
+          pick = 0;
+        } else {
+          do { pick = Math.floor(Math.random() * TRACKS.length); } while (pick === idx);
+        }
+        ev.stopImmediatePropagation();
+        p.setTrackIndex(pick, true);
+        return;
+      }
+
+      if (!rep && idx >= 0 && idx === TRACKS.length - 1) {
+        ev.stopImmediatePropagation();
+        try { audio.pause(); } catch (err) {}
+        return;
+      }
+    }, { capture: true });
+  }
+  tryInstall();
+})();
+
 initSFX();
 initEasterEggs();
 initKonami({ onUnlock: function () {} });
