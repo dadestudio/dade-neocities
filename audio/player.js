@@ -393,7 +393,17 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
     if (isPlaying && parsedMidi && ctx) {
       const elapsed = Math.max(0, ctx.currentTime - playheadStart);
       if (ui.time) ui.time.textContent = fmtTime(elapsed) + ' / ' + fmtTime(totalDur);
-      if (totalDur > 0 && elapsed >= totalDur - 0.05) { isPlaying = false; offsetSec = 0; setTrackIndex((trackIdx + 1) % tracks.length, true); }
+      if (totalDur > 0 && elapsed >= totalDur - 0.05) {
+        isPlaying = false; offsetSec = 0;
+        const nextIdx = (trackIdx + 1) % tracks.length;
+        const hook = (typeof window !== 'undefined') && window.__dadeOnTrackEnd;
+        if (typeof hook === 'function') {
+          const o = hook(trackIdx, nextIdx, tracks.length);
+          if (o === false) return;
+          if (typeof o === 'number' && o >= 0 && o < tracks.length) { setTrackIndex(o, true); return; }
+        }
+        setTrackIndex(nextIdx, true);
+      }
     } else if (ui.time && parsedMidi) {
       ui.time.textContent = fmtTime(offsetSec) + ' / ' + fmtTime(totalDur);
     }
