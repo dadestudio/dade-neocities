@@ -46,6 +46,7 @@ img {
 <link rel="stylesheet" href="styles/theme.css">
 <link rel="stylesheet" href="styles/layout.css">
 <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
+<script src="https://unpkg.com/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
 </head>
 <body bgcolor="#000033" text="#00ff00" link="#ffff00" vlink="#ff00ff" alink="#00ffff">
   <canvas id="dade-starfield" class="dade-fx-starfield" aria-hidden="true"></canvas>
@@ -100,18 +101,9 @@ img {
       </section>
 
       <section class="panel" id="now-playing">
-        <h2 class="panel-header">// now playing</h2>
-        <div id="audio-player-mount" class="audio-mount">
-          <span id="dade-play-audio" class="btn" role="button" tabindex="0">[ &#9834; PLAY ]</span>
-          <select id="track-select" class="btn" title="Synth track">
-            <option value="midi" selected>MIDI</option>
-          </select>
-          <canvas id="viz" width="320" height="80" aria-hidden="true"></canvas>
+        <div id="audio-player-mount"></div>
+        <div style="margin-top: var(--space-2);">
           <span id="dade-sfx-toggle" class="btn" role="button" tabindex="0">[ SFX: OFF ]</span>
-          <label for="midi-volume" class="mono dim" style="display: inline-flex; align-items: center; gap: var(--space-1);">
-            <span>VOL</span>
-            <input type="range" id="midi-volume" min="0" max="100" value="70" aria-label="MIDI volume">
-          </label>
         </div>
       </section>
 
@@ -180,11 +172,18 @@ img {
 <script type="module">
 import { initCRT, setCRTEnabled } from './effects/crt.js';
 import { initStarfield, setStarsEnabled } from './effects/starfield.js';
-import { tracks } from './audio/synth.js';
-import { initMidiPlayer } from './audio/midi-player.js';
+import { initPlayer } from './audio/player.js';
 import { initSFX } from './audio/sfx.js';
 import { initKonami } from './interactive/konami.js';
 import { initEasterEggs } from './interactive/easter-eggs.js';
+
+const TRACKS = [
+  { src: 'sounds/midi/01-iris.mid',          title: 'Iris',          artist: 'Goo Goo Dolls',     year: 1998 },
+  { src: 'sounds/midi/02-one-week.mid',      title: 'One Week',      artist: 'Barenaked Ladies',  year: 1998 },
+  { src: 'sounds/midi/03-closing-time.mid',  title: 'Closing Time',  artist: 'Semisonic',         year: 1998 },
+  { src: 'sounds/midi/04-sex-and-candy.mid', title: 'Sex and Candy', artist: 'Marcy Playground',  year: 1997 },
+  { src: 'sounds/midi/05-torn.mid',          title: 'Torn',          artist: 'Natalie Imbruglia', year: 1997 },
+];
 
 function readBool(key, def) {
   try {
@@ -224,110 +223,21 @@ if (starsBtn) starsBtn.addEventListener('click', function () {
   starsBtn.textContent = starsLabel(starsOn);
 });
 
-var midiPlayerApi = null;
-var midiLoadPromise = null;
-var trackSelect = document.getElementById('track-select');
-var viz = document.getElementById('viz');
-var playSpan = document.getElementById('dade-play-audio');
 var sfxSpan = document.getElementById('dade-sfx-toggle');
-var volSlider = document.getElementById('midi-volume');
-
-function readVol() {
-  try {
-    var raw = localStorage.getItem('midi_volume');
-    if (raw === null) return 70;
-    var n = parseInt(raw, 10);
-    if (isNaN(n)) return 70;
-    return Math.max(0, Math.min(100, n));
-  } catch (e) { return 70; }
-}
-
-var midiVol = readVol();
-if (volSlider) {
-  volSlider.value = String(midiVol);
-  volSlider.addEventListener('input', function () {
-    var v = parseInt(volSlider.value, 10);
-    if (isNaN(v)) v = 70;
-    midiVol = v;
-    try { localStorage.setItem('midi_volume', String(v)); } catch (e) {}
-    if (midiPlayerApi && typeof midiPlayerApi.setVolume === 'function') {
-      midiPlayerApi.setVolume(v / 100);
-    }
-  });
-}
-
-if (trackSelect) {
-  for (var ti = 0; ti < tracks.length; ti++) {
-    var opt = document.createElement('option');
-    opt.value = tracks[ti].name;
-    opt.textContent = tracks[ti].name;
-    trackSelect.appendChild(opt);
-  }
-}
-
-function stopAllSynth() {
-  for (var si = 0; si < tracks.length; si++) tracks[si].stop();
-}
-
 function sfxRead() {
   try { return localStorage.getItem('sfx_enabled') === 'true'; } catch (e) { return false; }
 }
-
 function sfxRefreshLabel() {
   if (sfxSpan) sfxSpan.textContent = '[ SFX: ' + (sfxRead() ? 'ON' : 'OFF') + ' ]';
 }
-
 sfxRefreshLabel();
-
 if (sfxSpan) sfxSpan.addEventListener('click', function () {
   try { localStorage.setItem('sfx_enabled', sfxRead() ? 'false' : 'true'); } catch (e) {}
   sfxRefreshLabel();
 });
 
-if (playSpan) playSpan.addEventListener('click', function () {
-  if (!midiLoadPromise) {
-    midiLoadPromise = initMidiPlayer({ midiUrl: 'sounds/midi.mid', canvas: viz });
-  }
-  midiLoadPromise
-    .then(function (api) {
-      midiPlayerApi = api;
-      if (typeof api.setVolume === 'function') api.setVolume(midiVol / 100);
-      var ctx = globalThis.__dadeAudioCtx;
-      return ctx.resume().then(function () {
-        stopAllSynth();
-        api.stopMidi();
-        api.setMidiAudible(false, 0.03);
-        api.startVisualizer();
-        var sel = trackSelect ? trackSelect.value : 'midi';
-        if (sel === 'midi') {
-          api.setMidiAudible(true, 0.03);
-          api.startMidi();
-        } else {
-          for (var pj = 0; pj < tracks.length; pj++) {
-            if (tracks[pj].name === sel) { tracks[pj].play(); break; }
-          }
-        }
-        globalThis.__dadeAudioUnlocked = true;
-      });
-    })
-    .catch(function (e) { console.error(e); });
-});
-
-if (trackSelect) trackSelect.addEventListener('change', function () {
-  if (!midiPlayerApi || !globalThis.__dadeAudioUnlocked) return;
-  midiPlayerApi.stopMidi();
-  midiPlayerApi.setMidiAudible(false, 0.03);
-  stopAllSynth();
-  var name = trackSelect.value;
-  if (name === 'midi') {
-    midiPlayerApi.setMidiAudible(true, 0.03);
-    midiPlayerApi.startMidi();
-  } else {
-    for (var sj = 0; sj < tracks.length; sj++) {
-      if (tracks[sj].name === name) { tracks[sj].play(); break; }
-    }
-  }
-});
+var playerMount = document.getElementById('audio-player-mount');
+if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: false });
 
 initSFX();
 initEasterEggs();
