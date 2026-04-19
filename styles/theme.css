@@ -119,469 +119,597 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
 .sf-loading { color: var(--ink-dim); font-size: var(--fs-xs); margin-top: var(--space-1); }
 
 /* ----------------------------------------------------------------------
-   Winamp 2 chrome skin — scoped to #winamp-chrome so it cannot bleed onto
-   the rest of the homepage. Palette and pixel sizing target the classic
-   275x116 main player look: dark navy slate body, bright blue title bar,
-   silver-beveled chrome buttons, recessed near-black LCD wells with
-   green VT323 readouts, and yellow-amber EQ fader thumbs.
+   Winamp 2 chrome skin — sprite-sliced from the Base 2.91 .wsz pack.
+   Every visible piece of chrome (titlebar art, recessed wells, transport
+   buttons, volume/balance tracks + thumbs, EQ window, EQ thumbs) is
+   painted by background-image + background-position from the bitmap
+   sprite sheets that ship with the original skin. No CSS gradients —
+   the bevels and gradients are baked into the bitmaps.
+
+   Coordinate system follows the public Winamp 2 skin spec, which has
+   been the canonical reference since ~1998. Sheet sizes after PNG
+   conversion (preserved 1:1 from the BMP source):
+
+     main.png      275x116    full main-window background
+     cbuttons.png  136x36     5 transport buttons (23x18 each, eject 22x18)
+                              top row y=0 normal, bottom row y=18 pressed
+     volume.png    68x433     28 track frames 68x15 stacked + thumb at y=422
+     balance.png   68x433     same layout, active 38px area centered
+     eqmain.png    275x315    EQ window bg (top 116px) + thumb sprites
+     numbers.png   99x13      10 digits 9x13 laid horizontally
+     text.png      155x74     5x6 bitmap font (3 rows of 31 chars, plus extras)
+     monoster.png  58x24      mono/stereo indicator pair
+     shufrep.png   92x85      shuffle / repeat button states
+     posbar.png    307x10     position-bar track + thumb
+     titlebar.png  344x87     alt titlebar variants (focus / shaded)
+     pledit.png    280x186    playlist editor chrome (not used yet)
+     eq_ex.png     275x82     extended EQ sprites
+     playpaus.png  42x9       small play/pause/stop status indicator
+
+   Pixel-perfect rendering requires `image-rendering: pixelated` on every
+   sprite-backed element so the browser never bilinear-smooths the bitmaps
+   when the layout DPR is non-integer.
    ---------------------------------------------------------------------- */
+
+#winamp-stack {
+  width: 275px;
+  margin: 0;
+  padding: 0;
+  font-family: "VT323", "Courier New", Courier, monospace;
+}
+
 #winamp-chrome {
-  --wa-body: #2B3A4F;          /* dark navy slate panel body */
-  --wa-title-top: #1F5BAC;     /* bright blue title-bar top stop */
-  --wa-title-bot: #0F3B7C;     /* deeper navy title-bar bottom stop */
-  --wa-bevel-light: #E8ECF4;   /* raised top/left bevel */
-  --wa-bevel-dark: #1A1E28;    /* raised bottom/right bevel (also inset reverse) */
-  --wa-chrome-top: #C8CCD4;    /* silver button face top stop */
-  --wa-chrome-bot: #8A8E96;    /* silver button face bottom stop */
-  --wa-lcd-well: #000814;      /* near-black navy LCD recess */
-  --wa-lcd-green: #00FF66;     /* primary LCD green digits */
-  --wa-lcd-amber: #FFCC33;     /* secondary LCD amber accent */
-  --wa-glyph-ink: #050810;     /* black button glyph ink */
-  --wa-text: #FFFFFF;          /* title-bar white */
+  position: relative;
   width: 275px;
   height: 116px;
-  box-sizing: border-box;
-  background: var(--wa-body);
-  padding: 2px 3px 3px 3px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/main.png");
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 275px 116px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  color: #00FF66;
   font-family: "VT323", "Courier New", Courier, monospace;
-  color: var(--wa-text);
   font-size: 10px;
   line-height: 1;
-  /* raised outer bevel: light top/left, dark bottom/right */
-  border-top: 1px solid var(--wa-bevel-light);
-  border-left: 1px solid var(--wa-bevel-light);
-  border-right: 1px solid var(--wa-bevel-dark);
-  border-bottom: 1px solid var(--wa-bevel-dark);
-  box-shadow:
-    inset 1px 1px 0 #FFFFFF22,
-    inset -1px -1px 0 #00000055;
-}
-
-#winamp-chrome .wa-titlebar {
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 0 6px;
-  background: linear-gradient(180deg, var(--wa-title-top) 0%, var(--wa-title-bot) 100%);
-  color: var(--wa-text);
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   user-select: none;
-  border-top: 1px solid var(--wa-bevel-light);
-  border-left: 1px solid var(--wa-bevel-light);
-  border-right: 1px solid var(--wa-bevel-dark);
-  border-bottom: 1px solid var(--wa-bevel-dark);
-}
-#winamp-chrome .wa-bolt {
-  color: var(--wa-lcd-amber);
-  font-size: 11px;
-  line-height: 1;
-  text-shadow: 0 0 4px rgba(255, 204, 51, 0.6);
-}
-#winamp-chrome .wa-title {
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 11px;
-  font-weight: normal;
-  letter-spacing: 0.18em;
-  color: var(--wa-text);
-  text-shadow: 1px 1px 0 #00000088;
-  white-space: nowrap;
 }
 
-/* LCD well — kbps / kHz / mono-stereo readouts in green VT323 */
-#winamp-chrome .wa-readout {
+/* Title bar — the bitmap art in main.png paints the gradient, bolt and
+   "WINAMP" wordmark. The .wa-titlebar element stays as a clickable spacer
+   covering the same coords; its child labels are hidden because the
+   wordmark is already in the sprite. */
+#winamp-chrome .wa-titlebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 275px;
   height: 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 6px;
-  margin-top: 2px;
-  background: var(--wa-lcd-well);
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  /* inset well: dark top/left, light bottom/right */
-  border-top: 1px solid var(--wa-bevel-dark);
-  border-left: 1px solid var(--wa-bevel-dark);
-  border-right: 1px solid var(--wa-bevel-light);
-  border-bottom: 1px solid var(--wa-bevel-light);
-  box-shadow: inset 0 0 6px #000;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: default;
 }
-#winamp-chrome .wa-bitrate,
-#winamp-chrome .wa-srate,
-#winamp-chrome .wa-channels {
-  color: var(--wa-lcd-green);
-  text-shadow: 0 0 3px rgba(0, 255, 102, 0.45);
-}
+#winamp-chrome .wa-titlebar > * { display: none; }
 
-/* Player mount — recessed LCD-style well that contains the time digits,
-   track scroller, transport row, and the side-by-side vol+bal sliders. */
+/* The kbps/khz/stereo readout text is painted inside main.png as static
+   labels. Hide the live HTML so we don't double-render. */
+#winamp-chrome .wa-readout { display: none; }
+
+/* Hidden helper elements that do not render any chrome. */
+#winamp-chrome .wa-track-select,
+#winamp-chrome .wa-viz { display: none !important; }
+
+/* Audio player mount becomes a coordinate space spanning the full chrome.
+   Every interactive child is absolutely positioned at canonical Winamp
+   pixel coordinates so the live controls land exactly on top of the
+   sprite art. */
 #winamp-chrome #audio-player-mount {
-  margin-top: 2px;
-  padding: 3px 4px;
-  background: var(--wa-lcd-well);
-  border-top: 1px solid var(--wa-bevel-dark);
-  border-left: 1px solid var(--wa-bevel-dark);
-  border-right: 1px solid var(--wa-bevel-light);
-  border-bottom: 1px solid var(--wa-bevel-light);
-  box-shadow: inset 0 0 6px #000;
-  color: var(--wa-lcd-green);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 275px;
+  height: 116px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
-#winamp-chrome #audio-player-mount .panel-header {
-  display: none; /* the chrome title bar already names the player */
-}
+#winamp-chrome #audio-player-mount h2.panel-header { display: none; }
 #winamp-chrome #audio-player-mount .audio-mount {
+  position: absolute;
+  inset: 0;
   display: block;
   background: transparent;
+  padding: 0;
+  margin: 0;
+  border: 0;
 }
-#winamp-chrome #audio-player-mount .audio-mount canvas {
-  display: none; /* small viz canvas hidden inside the chrome to save room */
-}
+#winamp-chrome #audio-player-mount .audio-mount canvas { display: none !important; }
+
+/* Track scroller — bitmap text would come from text.png; we render the
+   live track title with VT323 at 6px so it reads in the painted well. */
 #winamp-chrome #audio-player-mount .lcd {
+  position: absolute;
+  left: 111px;
+  top: 27px;
+  width: 154px;
+  height: 6px;
+  margin: 0;
+  padding: 0;
   background: transparent;
   border: 0;
   box-shadow: none;
-  padding: 0;
-  margin: 0;
   font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 10px;
-  color: var(--wa-lcd-green);
-  text-shadow: 0 0 3px rgba(0, 255, 102, 0.45);
-  letter-spacing: 0.05em;
-  line-height: 1.1;
-}
-#winamp-chrome #audio-player-mount .lcd-scroll {
-  white-space: nowrap;
+  font-size: 7px;
+  line-height: 6px;
+  color: #00FF66;
+  text-shadow: 0 0 2px rgba(0, 255, 102, 0.5);
+  letter-spacing: 0.02em;
   overflow: hidden;
-  width: 100%;
+  white-space: nowrap;
 }
-#winamp-chrome #audio-player-mount [data-role="time"] {
+#winamp-chrome #audio-player-mount .lcd-scroll span {
   display: inline-block;
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 22px;
-  line-height: 1;
-  color: var(--wa-lcd-green);
-  text-shadow: 0 0 4px rgba(0, 255, 102, 0.55);
-  letter-spacing: 0.04em;
-  margin: 1px 0;
-}
-#winamp-chrome #audio-player-mount [data-role="loading"] {
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 9px;
-  color: var(--wa-lcd-amber);
-  margin-left: 4px;
-}
-#winamp-chrome #audio-player-mount .mono.dim {
-  color: var(--wa-lcd-green);
+  padding-left: 100%;
+  animation: lcd-marquee 16s linear infinite;
 }
 
-/* Transport row — five 22x18 silver chrome buttons, ZERO gap. */
+/* Time digits — main.png paints the digit well; we overlay the live time
+   in VT323 styled as the canonical green. The numbers.png sprite is
+   referenced in the docs; switching to per-digit sprite spans would
+   require touching audio/player.js which is locked. */
+#winamp-chrome #audio-player-mount [data-role="time"] {
+  position: absolute;
+  left: 36px;
+  top: 26px;
+  width: 63px;
+  height: 13px;
+  margin: 0;
+  padding: 0;
+  font-family: "VT323", "Courier New", Courier, monospace;
+  font-size: 14px;
+  line-height: 13px;
+  color: #00FF66;
+  text-shadow: 0 0 3px rgba(0, 255, 102, 0.5);
+  letter-spacing: 0.04em;
+}
+#winamp-chrome #audio-player-mount [data-role="time"] + .sf-loading,
+#winamp-chrome #audio-player-mount [data-role="loading"] { display: none; }
+#winamp-chrome #audio-player-mount .audio-mount > .mono.dim {
+  position: absolute;
+  left: 36px;
+  top: 26px;
+  width: 80px;
+  height: 13px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Transport row — sprite-sliced from cbuttons.png. The sheet is 136x36:
+   top row y=0 = normal, bottom row y=18 = pressed. X offsets per button:
+   prev 0, play 23, pause 46, stop 69, next 92, eject 115. */
 #winamp-chrome #audio-player-mount .player-controls {
+  position: absolute;
+  left: 16px;
+  top: 88px;
   display: flex;
   gap: 0;
-  margin-top: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 #winamp-chrome #audio-player-mount .player-controls .btn {
-  width: 22px;
+  width: 23px;
   height: 18px;
   min-width: 0;
   padding: 0;
   margin: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-bot) 100%);
-  color: var(--wa-glyph-ink);
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 11px;
-  line-height: 1;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/cbuttons.png");
+  background-repeat: no-repeat;
+  background-size: 136px 36px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  text-indent: -9999px;
+  overflow: hidden;
   cursor: pointer;
-  border-top: 1px solid var(--wa-bevel-light);
-  border-left: 1px solid var(--wa-bevel-light);
-  border-right: 1px solid var(--wa-bevel-dark);
-  border-bottom: 1px solid var(--wa-bevel-dark);
 }
-#winamp-chrome #audio-player-mount .player-controls .btn:hover {
-  color: var(--wa-glyph-ink);
-}
-#winamp-chrome #audio-player-mount .player-controls .btn:active {
-  border-top: 1px solid var(--wa-bevel-dark);
-  border-left: 1px solid var(--wa-bevel-dark);
-  border-right: 1px solid var(--wa-bevel-light);
-  border-bottom: 1px solid var(--wa-bevel-light);
-  background: linear-gradient(180deg, var(--wa-chrome-bot) 0%, var(--wa-chrome-top) 100%);
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="prev"]  { background-position:    0px 0; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="play"]  { background-position: -23px 0; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="pause"] { background-position: -46px 0; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="stop"]  { background-position: -69px 0; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="next"]  { background-position: -92px 0; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="prev"]:active  { background-position:    0px -18px; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="play"]:active  { background-position: -23px -18px; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="pause"]:active { background-position: -46px -18px; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="stop"]:active  { background-position: -69px -18px; }
+#winamp-chrome #audio-player-mount .player-controls .btn[data-act="next"]:active  { background-position: -92px -18px; }
+#winamp-chrome #audio-player-mount .player-controls .btn:hover { background-color: transparent; }
+#winamp-chrome #audio-player-mount .player-controls .btn:focus-visible {
+  outline: 1px dotted #FFCC33;
+  outline-offset: 0;
 }
 
-/* Volume + balance — two thin horizontal sliders side by side, 68x6 dark
-   track with an 11x8 silver chrome thumb. The audio graph reads .vol; .bal
-   is decorative (no wiring), per the audio-graph lock. */
-#winamp-chrome #audio-player-mount input[type="range"].vol,
-#winamp-chrome #audio-player-mount input[type="range"].bal {
+/* Volume slider — track is sprite-sliced from volume.png at canonical
+   x=107, y=57 (68x14). Frame index is updated via the --vol-frame CSS
+   variable from the inline init script in index.html (input event only,
+   no audio-graph changes). 28 frames of 15px tall stacked vertically;
+   thumb sprite sits at y=422 (normal) / y=423 (pressed) in the sheet. */
+#winamp-chrome #audio-player-mount input[type="range"].vol {
+  position: absolute;
+  left: 107px;
+  top: 57px;
+  width: 68px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
   -webkit-appearance: none;
   appearance: none;
-  width: 68px;
-  height: 6px;
-  margin: 4px 6px 2px 0;
-  padding: 0;
-  background: var(--wa-lcd-well);
-  border-top: 1px solid var(--wa-bevel-dark);
-  border-left: 1px solid var(--wa-bevel-dark);
-  border-right: 1px solid var(--wa-bevel-light);
-  border-bottom: 1px solid var(--wa-bevel-light);
-  vertical-align: middle;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/volume.png");
+  background-repeat: no-repeat;
+  background-position: 0 calc(var(--vol-frame, 14) * -15px);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
   cursor: ew-resize;
 }
-#winamp-chrome #audio-player-mount input[type="range"].bal { margin-right: 0; }
+#winamp-chrome #audio-player-mount input[type="range"].vol::-webkit-slider-runnable-track {
+  width: 68px;
+  height: 14px;
+  background: transparent;
+  border: 0;
+}
+#winamp-chrome #audio-player-mount input[type="range"].vol::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 11px;
+  margin-top: 2px;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/volume.png");
+  background-repeat: no-repeat;
+  background-position: -15px -422px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  cursor: ew-resize;
+}
+#winamp-chrome #audio-player-mount input[type="range"].vol:active::-webkit-slider-thumb {
+  background-position: 0 -422px;
+}
+#winamp-chrome #audio-player-mount input[type="range"].vol::-moz-range-track {
+  width: 68px;
+  height: 14px;
+  background: transparent;
+  border: 0;
+}
+#winamp-chrome #audio-player-mount input[type="range"].vol::-moz-range-thumb {
+  width: 14px;
+  height: 11px;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/volume.png");
+  background-repeat: no-repeat;
+  background-position: -15px -422px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  cursor: ew-resize;
+}
+#winamp-chrome #audio-player-mount input[type="range"].vol:active::-moz-range-thumb {
+  background-position: 0 -422px;
+}
 
-#winamp-chrome #audio-player-mount input[type="range"].vol::-webkit-slider-thumb,
+/* Balance slider — sprite balance.png at canonical x=177, y=57 (38x14).
+   Frame index = round(|balance| * 27). The sprite is 68px wide but the
+   active 38px area is centered, so the rendered slider is 38 wide with
+   the bg shifted left by 15px to expose the active region. */
+#winamp-chrome #audio-player-mount input[type="range"].bal {
+  position: absolute;
+  left: 177px;
+  top: 57px;
+  width: 38px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/balance.png");
+  background-repeat: no-repeat;
+  background-position: -15px calc(var(--bal-frame, 0) * -15px);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  cursor: ew-resize;
+}
+#winamp-chrome #audio-player-mount input[type="range"].bal::-webkit-slider-runnable-track {
+  width: 38px;
+  height: 14px;
+  background: transparent;
+  border: 0;
+}
 #winamp-chrome #audio-player-mount input[type="range"].bal::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 11px;
-  height: 8px;
-  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-bot) 100%);
-  border-top: 1px solid var(--wa-bevel-light);
-  border-left: 1px solid var(--wa-bevel-light);
-  border-right: 1px solid var(--wa-bevel-dark);
-  border-bottom: 1px solid var(--wa-bevel-dark);
+  width: 14px;
+  height: 11px;
+  margin-top: 2px;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/balance.png");
+  background-repeat: no-repeat;
+  background-position: -15px -422px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
   cursor: ew-resize;
 }
-#winamp-chrome #audio-player-mount input[type="range"].vol::-moz-range-thumb,
+#winamp-chrome #audio-player-mount input[type="range"].bal:active::-webkit-slider-thumb {
+  background-position: 0 -422px;
+}
+#winamp-chrome #audio-player-mount input[type="range"].bal::-moz-range-track {
+  width: 38px;
+  height: 14px;
+  background: transparent;
+  border: 0;
+}
 #winamp-chrome #audio-player-mount input[type="range"].bal::-moz-range-thumb {
-  width: 11px;
-  height: 8px;
-  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-bot) 100%);
-  border-top: 1px solid var(--wa-bevel-light);
-  border-left: 1px solid var(--wa-bevel-light);
-  border-right: 1px solid var(--wa-bevel-dark);
-  border-bottom: 1px solid var(--wa-bevel-dark);
+  width: 14px;
+  height: 11px;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/balance.png");
+  background-repeat: no-repeat;
+  background-position: -15px -422px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
   cursor: ew-resize;
+}
+#winamp-chrome #audio-player-mount input[type="range"].bal:active::-moz-range-thumb {
+  background-position: 0 -422px;
 }
 
-/* Clutter bar (EQ / PL toggle row + SFX label). */
+/* EQ / PL clutter toggles — sit on top of the labels painted into main.png
+   at the canonical lower-right cluster. They stay visually invisible
+   (the sprite art handles the look) but remain clickable hit-targets. */
 #winamp-chrome .wa-clutter-bar {
+  position: absolute;
+  left: 219px;
+  top: 58px;
   display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 4px;
-  margin-top: 2px;
-  background: var(--wa-body);
-  border-top: 1px solid var(--wa-bevel-light);
-  border-left: 1px solid var(--wa-bevel-light);
-  border-right: 1px solid var(--wa-bevel-dark);
-  border-bottom: 1px solid var(--wa-bevel-dark);
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
 }
 #winamp-chrome .wa-clutter {
-  width: 22px;
+  width: 23px;
   height: 12px;
+  margin: 0;
   padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-bot) 100%);
-  color: var(--wa-glyph-ink);
-  border-top: 1px solid var(--wa-bevel-light);
-  border-left: 1px solid var(--wa-bevel-light);
-  border-right: 1px solid var(--wa-bevel-dark);
-  border-bottom: 1px solid var(--wa-bevel-dark);
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 9px;
-  line-height: 1;
+  border: 0;
+  background-color: transparent;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  text-indent: -9999px;
   cursor: pointer;
-  text-transform: uppercase;
-}
-#winamp-chrome .wa-clutter[aria-pressed="true"],
-#winamp-chrome .wa-clutter:active {
-  border-top: 1px solid var(--wa-bevel-dark);
-  border-left: 1px solid var(--wa-bevel-dark);
-  border-right: 1px solid var(--wa-bevel-light);
-  border-bottom: 1px solid var(--wa-bevel-light);
-  background: linear-gradient(180deg, var(--wa-chrome-bot) 0%, var(--wa-chrome-top) 100%);
+  overflow: hidden;
 }
 #winamp-chrome .wa-clutter:focus-visible {
-  outline: 1px dotted var(--wa-lcd-amber);
-  outline-offset: 1px;
+  outline: 1px dotted #FFCC33;
+  outline-offset: 0;
+}
+/* SFX toggle is not part of the original Winamp chrome — drop it on its
+   own line below the EQ panel as a small monochrome ascii button. */
+#winamp-stack .wa-stack-extras {
+  width: 275px;
+  margin: 4px 0 0 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "VT323", "Courier New", Courier, monospace;
+  font-size: 10px;
+}
+#winamp-stack #dade-sfx-toggle {
+  display: inline-block;
+  padding: 1px 4px;
+  background: #000814;
+  color: #00FF66;
+  font-family: "VT323", "Courier New", Courier, monospace;
+  font-size: 10px;
+  border: 1px solid #1A1E28;
+  cursor: pointer;
 }
 
 /* ----------------------------------------------------------------------
-   Equalizer panel — 10 vertical fader tracks (7 wired by the audio graph
-   plus 3 decorative cells to complete the canonical 10-band look). The
-   wired faders own real <input type="range"> controls; the decorative
-   ones are pure markup styled to match. Yellow-amber chrome thumbs.
+   Equalizer window — sprite-sliced from eqmain.png. The full sheet is
+   275x315; the top 116px is the EQ window background (titlebar + preset
+   row + 10 fader tracks + curve area). Below y=116 lives the sprite
+   strip for fader thumbs and other controls. Per the public spec:
+
+     fader thumb normal  = 11x11 at (1, 164)
+     fader thumb pressed = 11x11 at (1, 176)
+
+   The 10 fader inputs (7 wired + 3 decorative) are absolutely positioned
+   over the painted track area at canonical x coordinates. The eqmain.png
+   art draws the recessed track grooves so we don't paint our own.
    ---------------------------------------------------------------------- */
 #winamp-eq {
-  margin-top: 2px;
-  padding: 6px;
-  background: var(--wa-body);
-  color: var(--wa-text);
+  position: relative;
+  width: 275px;
+  height: 116px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eqmain.png");
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 275px 315px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  color: transparent;
   font-family: "VT323", "Courier New", Courier, monospace;
-  border-top: 1px solid var(--wa-bevel-light);
-  border-left: 1px solid var(--wa-bevel-light);
-  border-right: 1px solid var(--wa-bevel-dark);
-  border-bottom: 1px solid var(--wa-bevel-dark);
+  font-size: 10px;
 }
 #winamp-eq[hidden] { display: none; }
-#winamp-eq .eq-presets {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--wa-lcd-amber);
-}
-#winamp-eq .eq-presets label {
-  color: var(--wa-lcd-amber);
-  font-size: 10px;
-}
-#winamp-eq #eq-preset {
-  background: var(--wa-lcd-well);
-  color: var(--wa-lcd-green);
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 10px;
-  padding: 1px 2px;
-  border-top: 1px solid var(--wa-bevel-dark);
-  border-left: 1px solid var(--wa-bevel-dark);
-  border-right: 1px solid var(--wa-bevel-light);
-  border-bottom: 1px solid var(--wa-bevel-light);
-}
-#winamp-eq #eq-reset {
-  padding: 1px 6px;
-  font-size: 10px;
-  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-bot) 100%);
-  color: var(--wa-glyph-ink);
-  border-top: 1px solid var(--wa-bevel-light);
-  border-left: 1px solid var(--wa-bevel-light);
-  border-right: 1px solid var(--wa-bevel-dark);
-  border-bottom: 1px solid var(--wa-bevel-dark);
-}
-#winamp-eq #eq-reset:hover {
-  color: var(--wa-glyph-ink);
-}
 
-/* The fader row hosts the dB scale on the left and two flex children
-   (wired faders + decorative faders) that look like one continuous strip. */
+/* Hide every chunk of the existing EQ markup whose look is already
+   painted by eqmain.png (preset row, dB scale, fader labels). We keep
+   the inputs as the only interactive overlays. */
+#winamp-eq .eq-presets,
+#winamp-eq .eq-scale,
+#winamp-eq .eq-fader-label { display: none; }
+
 #winamp-eq .eq-fader-row {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
-  background: var(--wa-lcd-well);
-  padding: 6px 6px 4px 6px;
-  border-top: 1px solid var(--wa-bevel-dark);
-  border-left: 1px solid var(--wa-bevel-dark);
-  border-right: 1px solid var(--wa-bevel-light);
-  border-bottom: 1px solid var(--wa-bevel-light);
-}
-#winamp-eq .eq-scale {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 8px;
-  color: var(--wa-lcd-green);
-  text-shadow: 0 0 2px rgba(0, 255, 102, 0.4);
-  padding: 2px 2px 18px 0;
-  letter-spacing: 0.02em;
-  text-align: right;
-  min-width: 18px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 275px;
+  height: 116px;
+  display: block;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
 }
 #winamp-eq .eq-faders,
 #winamp-eq .eq-faders-decor {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 3px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-#winamp-eq .eq-faders-decor { flex: 0 0 auto; }
-#winamp-eq .eq-fader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 3px;
-  flex: 1 1 0;
-  min-width: 14px;
+  display: contents;
 }
 
-/* Wired faders own native vertical range inputs. */
+/* Per-band fader cell — 14 wide, 63 tall, top edge at y=38 of the EQ
+   window. 10 bands at 18px pitch starting at x=78 (matches eqmain.png
+   painted track positions). 7 wired bands first, then 3 decorative. */
+#winamp-eq .eq-fader {
+  position: absolute;
+  top: 38px;
+  width: 14px;
+  height: 63px;
+  margin: 0;
+  padding: 0;
+  display: block;
+  background: transparent;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+#winamp-eq .eq-faders > .eq-fader:nth-child(1) { left: 78px; }
+#winamp-eq .eq-faders > .eq-fader:nth-child(2) { left: 96px; }
+#winamp-eq .eq-faders > .eq-fader:nth-child(3) { left: 114px; }
+#winamp-eq .eq-faders > .eq-fader:nth-child(4) { left: 132px; }
+#winamp-eq .eq-faders > .eq-fader:nth-child(5) { left: 150px; }
+#winamp-eq .eq-faders > .eq-fader:nth-child(6) { left: 168px; }
+#winamp-eq .eq-faders > .eq-fader:nth-child(7) { left: 186px; }
+#winamp-eq .eq-faders-decor > .eq-fader:nth-child(1) { left: 204px; }
+#winamp-eq .eq-faders-decor > .eq-fader:nth-child(2) { left: 222px; }
+#winamp-eq .eq-faders-decor > .eq-fader:nth-child(3) { left: 240px; }
+
+#winamp-eq .eq-fader .eq-fader-track {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+}
+
+/* Decorative fader thumb — placeholder sprite for the bands that don't
+   have a wired native input. Sprite-sliced from eqmain.png. */
+#winamp-eq .eq-fader .eq-fader-thumb {
+  position: absolute;
+  left: 1px;
+  top: 26px;
+  width: 11px;
+  height: 11px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eqmain.png");
+  background-repeat: no-repeat;
+  background-position: -1px -164px;
+  background-size: 275px 315px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  border: 0;
+}
+
+/* Wired faders — native vertical range inputs. Track is transparent
+   (eqmain.png paints the groove); the thumb is sprite-sliced. */
 #winamp-eq .eq-fader input[type="range"] {
   -webkit-appearance: slider-vertical;
   appearance: slider-vertical;
-  writing-mode: bt-lr; /* legacy fallback for non-WebKit */
-  width: 16px;
-  height: 80px;
-  background: var(--wa-lcd-well);
-  cursor: ns-resize;
+  writing-mode: bt-lr;
+  width: 14px;
+  height: 63px;
   margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ns-resize;
+}
+#winamp-eq .eq-fader input[type="range"]::-webkit-slider-runnable-track {
+  width: 14px;
+  height: 63px;
+  background: transparent;
+  border: 0;
 }
 #winamp-eq .eq-fader input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 8px;
-  background: linear-gradient(180deg, var(--wa-lcd-amber) 0%, #AA8822 100%);
-  border-top: 1px solid #FFE9A0;
-  border-left: 1px solid #FFE9A0;
-  border-right: 1px solid #553C0A;
-  border-bottom: 1px solid #553C0A;
+  width: 11px;
+  height: 11px;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eqmain.png");
+  background-repeat: no-repeat;
+  background-position: -1px -164px;
+  background-size: 275px 315px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
   cursor: ns-resize;
+}
+#winamp-eq .eq-fader input[type="range"]:active::-webkit-slider-thumb {
+  background-position: -1px -176px;
+}
+#winamp-eq .eq-fader input[type="range"]::-moz-range-track {
+  width: 14px;
+  height: 63px;
+  background: transparent;
+  border: 0;
 }
 #winamp-eq .eq-fader input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 8px;
-  background: linear-gradient(180deg, var(--wa-lcd-amber) 0%, #AA8822 100%);
-  border-top: 1px solid #FFE9A0;
-  border-left: 1px solid #FFE9A0;
-  border-right: 1px solid #553C0A;
-  border-bottom: 1px solid #553C0A;
+  width: 11px;
+  height: 11px;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eqmain.png");
+  background-repeat: no-repeat;
+  background-position: -1px -164px;
+  background-size: 275px 315px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
   cursor: ns-resize;
 }
-#winamp-eq .eq-fader input[type="range"]:focus {
-  outline: 1px dotted var(--wa-lcd-amber);
+#winamp-eq .eq-fader input[type="range"]:active::-moz-range-thumb {
+  background-position: -1px -176px;
 }
-
-/* Decorative + placeholder faders — pure markup, no real input.
-   The rendered look (recessed track + amber chrome thumb) matches the
-   wired faders so the 10-band strip reads as one continuous panel. */
-#winamp-eq .eq-fader .eq-fader-track {
-  position: relative;
-  width: 4px;
-  height: 80px;
-  background: #050810;
-  border-top: 1px solid var(--wa-bevel-dark);
-  border-left: 1px solid var(--wa-bevel-dark);
-  border-right: 1px solid var(--wa-bevel-light);
-  border-bottom: 1px solid var(--wa-bevel-light);
-}
-#winamp-eq .eq-fader .eq-fader-thumb {
-  position: absolute;
-  left: -5px;
-  top: 36px;
-  width: 14px;
-  height: 8px;
-  background: linear-gradient(180deg, var(--wa-lcd-amber) 0%, #AA8822 100%);
-  border-top: 1px solid #FFE9A0;
-  border-left: 1px solid #FFE9A0;
-  border-right: 1px solid #553C0A;
-  border-bottom: 1px solid #553C0A;
-}
-#winamp-eq .eq-fader.eq-fader-placeholder .eq-fader-track,
-#winamp-eq .eq-fader.eq-fader-decor .eq-fader-track { width: 16px; }
-#winamp-eq .eq-fader.eq-fader-placeholder .eq-fader-thumb,
-#winamp-eq .eq-fader.eq-fader-decor .eq-fader-thumb { left: 1px; }
-
-#winamp-eq .eq-fader-label {
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 9px;
-  letter-spacing: 0.04em;
-  text-align: center;
-  color: var(--wa-lcd-green);
-  text-shadow: 0 0 2px rgba(0, 255, 102, 0.4);
+#winamp-eq .eq-fader input[type="range"]:focus-visible {
+  outline: 1px dotted #FFCC33;
+  outline-offset: 0;
 }

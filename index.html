@@ -102,21 +102,24 @@ img {
       </section>
 
       <section class="panel" id="now-playing">
-        <div id="winamp-chrome">
-          <div class="wa-titlebar">
-            <span class="wa-bolt" aria-hidden="true">&#9889;</span>
-            <span class="wa-title">WINAMP</span>
+        <div id="winamp-stack">
+          <div id="winamp-chrome">
+            <div class="wa-titlebar" aria-hidden="true"></div>
+            <div class="wa-readout" aria-hidden="true">
+              <span class="wa-bitrate">128 kbps</span>
+              <span class="wa-srate">44 kHz</span>
+              <span class="wa-channels">stereo</span>
+            </div>
+            <select id="track-select" class="wa-track-select" hidden aria-hidden="true"></select>
+            <canvas id="viz" class="wa-viz" width="280" height="48" hidden aria-hidden="true"></canvas>
+            <div id="audio-player-mount"></div>
+            <div class="wa-clutter-bar">
+              <button class="wa-clutter" id="wa-eq" aria-pressed="true" type="button" title="equalizer">EQ</button>
+              <button class="wa-clutter" id="wa-pl" aria-pressed="false" type="button" title="playlist">PL</button>
+            </div>
           </div>
-          <div class="wa-readout">
-            <span class="wa-bitrate">128 kbps</span>
-            <span class="wa-srate">44 kHz</span>
-            <span class="wa-channels">stereo</span>
-          </div>
-          <select id="track-select" class="wa-track-select" hidden aria-hidden="true"></select>
-          <canvas id="viz" class="wa-viz" width="280" height="48" hidden aria-hidden="true"></canvas>
-          <div id="audio-player-mount"></div>
           <div id="winamp-eq">
-            <div class="eq-presets">
+            <div class="eq-presets" aria-hidden="true">
               <label class="mono dim" for="eq-preset">PRESET</label>
               <select id="eq-preset">
                 <option value="Flat">Flat</option>
@@ -150,9 +153,7 @@ img {
               </div>
             </div>
           </div>
-          <div class="wa-clutter-bar">
-            <button class="wa-clutter" id="wa-eq" aria-pressed="true" type="button" title="per-family mixer">EQ</button>
-            <button class="wa-clutter" id="wa-pl" aria-pressed="false" type="button">PL</button>
+          <div class="wa-stack-extras">
             <span id="dade-sfx-toggle" class="btn" role="button" tabindex="0">[ SFX: OFF ]</span>
           </div>
         </div>
@@ -331,6 +332,49 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
       if (inject() || tries > 40) clearInterval(iv);
     }, 50);
   }
+})();
+
+// Update the volume/balance sprite frame indices on input. The volume.png
+// and balance.png sheets stack 28 frames of 15px each, so frame =
+// round(value*27) and the CSS reads --vol-frame / --bal-frame to slide
+// the background-position. Pure visual hook — never touches the audio
+// graph (audio/* stays locked).
+(function paintSpriteFrames() {
+  if (!playerMount) return;
+  function bind(el, kind) {
+    if (!el || el.__spriteBound) return;
+    el.__spriteBound = true;
+    function paint() {
+      var v = parseFloat(el.value);
+      if (!isFinite(v)) v = 0;
+      var min = parseFloat(el.min); if (!isFinite(min)) min = 0;
+      var max = parseFloat(el.max); if (!isFinite(max)) max = 1;
+      var frame;
+      if (kind === 'vol') {
+        var span = max - min || 1;
+        frame = Math.round(((v - min) / span) * 27);
+      } else {
+        var range = Math.max(Math.abs(min), Math.abs(max)) || 1;
+        frame = Math.round((Math.abs(v) / range) * 27);
+      }
+      if (frame < 0) frame = 0; if (frame > 27) frame = 27;
+      el.style.setProperty(kind === 'vol' ? '--vol-frame' : '--bal-frame', String(frame));
+    }
+    el.addEventListener('input', paint);
+    el.addEventListener('change', paint);
+    paint();
+  }
+  function scan() {
+    bind(playerMount.querySelector('input[data-role="vol"]'), 'vol');
+    bind(playerMount.querySelector('input[data-role="bal"]'), 'bal');
+  }
+  scan();
+  var tries = 0;
+  var iv = setInterval(function () {
+    tries += 1;
+    scan();
+    if (tries > 40) clearInterval(iv);
+  }, 50);
 })();
 
 // Relabel the 7 wired EQ faders with the canonical Winamp band frequencies
