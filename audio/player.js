@@ -149,7 +149,12 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
 
   async function ensureInstrument(name) {
     if (instrumentCache.has(name)) return instrumentCache.get(name);
-    const p = Soundfont.instrument(ctx, name, { soundfont: SF_HOST, destination: masterGain }).then((inst) => {
+    const p = Soundfont.instrument(ctx, name, {
+      soundfont: SF_HOST,
+      format: 'mp3',
+      nameToUrl: (n, sf, fmt) => `/sounds/soundfonts/${sf}/${n}-mp3.js`,
+      destination: masterGain,
+    }).then((inst) => {
       instrumentCache.set(name, inst); return inst;
     });
     instrumentCache.set(name, p);

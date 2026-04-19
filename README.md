@@ -11,6 +11,7 @@ A period-correct 1998 Geocities-style homepage, hand-built for Neocities.
 | `images/icons/` | Small UI icons (16/24/32px). Phosphor/EGA palette. | Active |
 | `images/_retired-g4/` | Original G4-era Geocities pastiche assets. Retained for provenance, not linked from live pages. | Retired Apr 18 2026 |
 | `sounds/midi/` | Period-authentic MIDI recreations played through FluidR3_GM via soundfont-player. See [`docs/MIDI_SOURCES.md`](docs/MIDI_SOURCES.md). | Active |
+| `sounds/soundfonts/FluidR3_GM/*-mp3.js` | Self-hosted FluidR3_GM SoundFont sample set (29 GM instruments used by the MIDIs above). Source: [gleitz/midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts), license MIT. Hosted locally to satisfy Neocities CSP `connect-src 'self'`. | Active |
 | `sounds/_retired/` | Legacy single-file `midi.mid` from T3 procedural-synth era. Retained for provenance. | Retired Apr 19 2026 |
 | `audio/_retired/` | Retired `synth.js` (procedural oscillators) + `midi-player.js` (oscillator-based MIDI). Replaced by `audio/player.js` + soundfont-player. | Retired Apr 19 2026 |
 

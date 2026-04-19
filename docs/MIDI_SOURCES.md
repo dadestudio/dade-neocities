@@ -63,3 +63,38 @@ All files are unaltered as downloaded; SHA256 captured at fetch time
 - **SHA256:** `82afcb764edc9f1e6b5c184ec814d4941e60761c9c61b2f4949675521f66d88a`
 - **Notes:** Most elaborate of the five — 16 tracks, full vocal melody,
   rhythm guitar, bass, strings.
+
+---
+
+## SoundFont samples
+
+The audio engine renders these MIDIs through the **FluidR3_GM** SoundFont,
+served as MP3-encoded JSONP wrappers (`<instrument>-mp3.js`) consumed by
+`soundfont-player`.
+
+- **Source repo:** https://github.com/gleitz/midi-js-soundfonts
+- **License:** MIT
+- **Format:** MP3-encoded JSONP wrappers (one `.js` file per GM instrument,
+  containing base64 MP3 samples for each pitch)
+- **Hosted at:** `sounds/soundfonts/FluidR3_GM/*-mp3.js`
+- **Instrument count:** 29 (the unique non-percussion GM programs used
+  across the 5 MIDIs above; channel 9 / drum kit excluded)
+- **On-disk size:** ~82,884 KB (~81 MB)
+
+### Why self-hosted
+
+Neocities enforces a server-side Content-Security-Policy of
+`connect-src 'self' data: blob:`, which blocks `soundfont-player`'s default
+fetch to `gleitz.github.io`. The player is configured with `nameToUrl` +
+`format: 'mp3'` options to load samples from the local
+`/sounds/soundfonts/FluidR3_GM/` path instead. See `audio/player.js`.
+
+### Instruments included
+
+`acoustic_grand_piano`, `acoustic_guitar_nylon`, `acoustic_guitar_steel`,
+`alto_sax`, `baritone_sax`, `cello`, `choir_aahs`, `distortion_guitar`,
+`electric_bass_finger`, `electric_bass_pick`, `electric_guitar_clean`,
+`electric_guitar_jazz`, `electric_piano_2`, `english_horn`, `lead_1_square`,
+`lead_6_voice`, `marimba`, `overdriven_guitar`, `pad_1_new_age`, `pad_2_warm`,
+`pad_4_choir`, `pad_6_metallic`, `slap_bass_1`, `string_ensemble_1`,
+`string_ensemble_2`, `synth_strings_1`, `tuba`, `viola`, `voice_oohs`.
