@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 <title>~*~ dadeog's cosmic homepage ~*~</title>
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
 <style>
 /* Critical above-fold: body background + base typography + link colors */
 body {
@@ -54,12 +55,12 @@ img {
     <aside id="sidebar">
       <h1 class="mono neon" style="font-size: var(--fs-lg); margin-bottom: var(--space-4);">DADEOG</h1>
       <ul class="nav-list">
-        <li><a href="index.html" class="current">&gt; HOME</a></li>
-        <li><a href="pages/about.html">&gt; ABOUT</a></li>
-        <li><a href="pages/guestbook.html">&gt; GUESTBOOK</a></li>
-        <li><a href="pages/links.html">&gt; LINKS</a></li>
-        <li><a href="pages/webring.html">&gt; WEBRING</a></li>
-        <li><a href="pages/arcade.html">&gt; ARCADE</a></li>
+        <li><a href="/" class="current">&gt; HOME</a></li>
+        <li><a href="/pages/about">&gt; ABOUT</a></li>
+        <li><a href="/pages/guestbook">&gt; GUESTBOOK</a></li>
+        <li><a href="/pages/links">&gt; LINKS</a></li>
+        <li><a href="/pages/webring">&gt; WEBRING</a></li>
+        <li><a href="/pages/arcade">&gt; ARCADE</a></li>
         <li id="dade-konami-secret"></li>
       </ul>
     </aside>
@@ -95,7 +96,7 @@ img {
       <section class="panel" id="about-blurb">
         <h2 class="panel-header">// about</h2>
         <p>Personal site. 1998 web energy, 2026 build tooling. Dark retro-tech.</p>
-        <p><a href="pages/about.html">&gt; read more</a></p>
+        <p><a href="/pages/about">&gt; read more</a></p>
       </section>
 
       <section class="panel" id="now-playing">
@@ -107,6 +108,10 @@ img {
           </select>
           <canvas id="viz" width="320" height="80" aria-hidden="true"></canvas>
           <span id="dade-sfx-toggle" class="btn" role="button" tabindex="0">[ SFX: OFF ]</span>
+          <label for="midi-volume" class="mono dim" style="display: inline-flex; align-items: center; gap: var(--space-1);">
+            <span>VOL</span>
+            <input type="range" id="midi-volume" min="0" max="100" value="70" aria-label="MIDI volume">
+          </label>
         </div>
       </section>
 
@@ -126,7 +131,7 @@ img {
           <li><strong>gh0stly_sk8r</strong> <span class="dim">1999-04-02</span><br>add me to your links pls</li>
           <li><strong>shredder99</strong> <span class="dim">1999-04-17</span><br>was here</li>
         </ul>
-        <p><a href="pages/guestbook.html">&gt; sign the guestbook</a></p>
+        <p><a href="/pages/guestbook">&gt; sign the guestbook</a></p>
       </section>
 
       <footer class="panel" id="footer">
@@ -225,6 +230,31 @@ var trackSelect = document.getElementById('track-select');
 var viz = document.getElementById('viz');
 var playSpan = document.getElementById('dade-play-audio');
 var sfxSpan = document.getElementById('dade-sfx-toggle');
+var volSlider = document.getElementById('midi-volume');
+
+function readVol() {
+  try {
+    var raw = localStorage.getItem('midi_volume');
+    if (raw === null) return 70;
+    var n = parseInt(raw, 10);
+    if (isNaN(n)) return 70;
+    return Math.max(0, Math.min(100, n));
+  } catch (e) { return 70; }
+}
+
+var midiVol = readVol();
+if (volSlider) {
+  volSlider.value = String(midiVol);
+  volSlider.addEventListener('input', function () {
+    var v = parseInt(volSlider.value, 10);
+    if (isNaN(v)) v = 70;
+    midiVol = v;
+    try { localStorage.setItem('midi_volume', String(v)); } catch (e) {}
+    if (midiPlayerApi && typeof midiPlayerApi.setVolume === 'function') {
+      midiPlayerApi.setVolume(v / 100);
+    }
+  });
+}
 
 if (trackSelect) {
   for (var ti = 0; ti < tracks.length; ti++) {
@@ -261,6 +291,7 @@ if (playSpan) playSpan.addEventListener('click', function () {
   midiLoadPromise
     .then(function (api) {
       midiPlayerApi = api;
+      if (typeof api.setVolume === 'function') api.setVolume(midiVol / 100);
       var ctx = globalThis.__dadeAudioCtx;
       return ctx.resume().then(function () {
         stopAllSynth();

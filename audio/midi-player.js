@@ -232,10 +232,21 @@ export function initMidiPlayer({ midiUrl, canvas }) {
     midiGain.gain.linearRampToValueAtTime(on ? 1 : 0, now + rampSec);
   }
 
+  function setVolume(v, rampSec = 0.02) {
+    const masterIn = globalThis.__dadeAudioMasterIn;
+    if (!masterIn) return;
+    const clamped = Math.max(0, Math.min(1, Number(v)));
+    const now = ctx.currentTime;
+    masterIn.gain.cancelScheduledValues(now);
+    masterIn.gain.setValueAtTime(masterIn.gain.value, now);
+    masterIn.gain.linearRampToValueAtTime(clamped, now + rampSec);
+  }
+
   return loadPromise.then(() => ({
     startMidi,
     stopMidi,
     setMidiAudible,
+    setVolume,
     startVisualizer,
   }));
 }

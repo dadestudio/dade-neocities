@@ -43,6 +43,30 @@ Commit at QA: ee221f1cd01c294a1d7f5ea56b94048c1704a38d
 - T4 Konami: PASS — ↑↑↓↓←→←→BA injects [ SECRET ] sidebar link + 3s [ 30 LIVES GRANTED ] banner
 - Snake + Pong: PASS — both playable end-to-end, high scores persist (snake_high, pong_high)
 
+## P7 polish bundle (2026-04-19)
+- favicon.ico generated locally via Pillow: 16x16 + 32x32 multi-image ICO,
+  neon-green "D" on #000033 ground with soft glow on the 32px size.
+  `<link rel="icon" href="/favicon.ico" type="image/x-icon">` added to
+  every HTML `<head>` (root absolute path works from any depth).
+- CSP / jsdelivr sourcemap warning: no `<meta http-equiv="Content-Security-Policy">`
+  exists in any HTML file. The DevTools "failed to fetch
+  cdn.jsdelivr.net/.../Midi.js.map" notice is a cosmetic browser-side
+  sourcemap probe, not a CSP violation. No action taken; remains
+  cosmetic-only when DevTools is open. Skip.
+- Extensionless internal links: `curl -sI` confirms Neocities serves
+  `.html`-stripped paths via 301 -> 200. Internal nav + content `<a href>`
+  rewritten to absolute extensionless paths (`/`, `/pages/about`,
+  `/pages/guestbook`, `/pages/links`, `/pages/webring`, `/pages/arcade`).
+  Note: spec example used `/about` etc.; deviated to `/pages/about` because
+  pages live in `/pages/` on disk and `/about` 404s on the live host.
+  No `_redirects` / `_headers` shipped — Neocities does the rewrite natively.
+- MIDI volume slider: `audio/midi-player.js` now exposes `setVolume(v)`
+  on the returned API; scales the master `GainNode`
+  (`globalThis.__dadeAudioMasterIn`) in the 0-1 range with a 20ms ramp.
+  `index.html` `#now-playing .panel` got a labeled `<input type="range"
+  id="midi-volume">`; value persists to `localStorage["midi_volume"]`,
+  reads back on init, default 70.
+
 ## Outstanding
 - deploy.sh was missing from the repo at QA start; created during this run
   and left uncommitted for review. Path: ./deploy.sh. It runs
