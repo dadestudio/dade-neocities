@@ -946,8 +946,8 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   color: transparent;
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 10px;
+  font-size: 0;
+  line-height: 0;
 }
 #winamp-eq[hidden] { display: none; }
 
@@ -970,11 +970,13 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   padding: 0;
   margin: 0;
   box-shadow: none;
+  pointer-events: none;
 }
 #winamp-eq .eq-faders,
 #winamp-eq .eq-faders-decor {
   display: contents;
 }
+#winamp-eq .eq-fader { pointer-events: auto; }
 
 /* Per-band fader cell — 14 wide, 63 tall, top edge at y=38 of the EQ
    window. 10 bands at 18px pitch starting at x=78 (matches eqmain.png
@@ -1093,6 +1095,213 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
 #winamp-eq .eq-fader input[type="range"]:focus-visible {
   outline: 1px dotted #FFCC33;
   outline-offset: 0;
+}
+
+/* ----------------------------------------------------------------------
+   EQ window chrome — sprites from eqmain.png (275×315) at the canonical
+   captbaritone/webamp coordinates (skinSprites.ts EQMAIN block):
+
+     EQ_TITLE_BAR             (0, 149) 275×14   inactive titlebar strip
+     EQ_TITLE_BAR_SELECTED    (0, 134) 275×14   active titlebar strip
+     EQ_CLOSE_BUTTON          (0, 116)   9×9
+     EQ_CLOSE_BUTTON_ACTIVE   (0, 125)   9×9
+     EQ_ON_BUTTON              (10, 119) 26×12   normal,  unselected
+     EQ_ON_BUTTON_DEPRESSED   (128, 119) 26×12   pressed, unselected
+     EQ_ON_BUTTON_SELECTED     (69, 119) 26×12   normal,  selected (lit)
+     EQ_ON_BUTTON_SEL_DEPR    (187, 119) 26×12   pressed, selected
+     EQ_AUTO_BUTTON            (36, 119) 32×12
+     EQ_AUTO_BUTTON_DEPRESSED (154, 119) 32×12
+     EQ_AUTO_BUTTON_SELECTED   (95, 119) 32×12
+     EQ_AUTO_BUTTON_SEL_DEPR  (213, 119) 32×12
+     EQ_PRESETS_BUTTON        (224, 164) 44×12
+     EQ_PRESETS_BUTTON_SELECT (224, 176) 44×12   used while menu is open
+     EQ_GRAPH_BACKGROUND        (0, 294) 113×19   decorative spectrum well
+
+   On-window placement (per equalizer-window.css):
+     titlebar                     (  0,  0) 275×14
+     close button                 (264,  3)   9×9
+     ON   button                  ( 14, 18)  26×12
+     AUTO button                  ( 40, 18)  32×12
+     PRESETS button               (217, 18)  44×12
+     EQ graph background          ( 86, 17) 113×19
+     preamp slider track          ( 21, 38)  14×63   (decorative here)
+   ---------------------------------------------------------------------- */
+
+#winamp-eq .eq-titlebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 275px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eqmain.png");
+  background-repeat: no-repeat;
+  background-position: 0 -134px;
+  background-size: 275px 315px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-eq .eq-titlebar.is-inactive {
+  background-position: 0 -149px;
+}
+#winamp-eq .eq-titlebar-close {
+  position: absolute;
+  left: 264px;
+  top: 3px;
+  width: 9px;
+  height: 9px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eqmain.png");
+  background-repeat: no-repeat;
+  background-position: 0 -116px;
+  background-size: 275px 315px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  cursor: pointer;
+  overflow: hidden;
+}
+#winamp-eq .eq-titlebar-close:active { background-position: 0 -125px; }
+
+/* ON / AUTO / PRESETS sprite-state buttons. Specificity beats the
+   #winamp-eq base background-image inheritance because each rule sets
+   background-image explicitly. aria-pressed=true selects the lit row. */
+#winamp-eq .eq-on,
+#winamp-eq .eq-auto,
+#winamp-eq .eq-presets-btn {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eqmain.png");
+  background-repeat: no-repeat;
+  background-size: 275px 315px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  text-indent: -9999px;
+  overflow: hidden;
+  cursor: pointer;
+}
+#winamp-eq .eq-on   { left:  14px; top: 18px; width: 26px; height: 12px; }
+#winamp-eq .eq-auto { left:  40px; top: 18px; width: 32px; height: 12px; }
+#winamp-eq .eq-presets-btn { left: 217px; top: 18px; width: 44px; height: 12px; }
+
+#winamp-eq .eq-on                                   { background-position:  -10px -119px; }
+#winamp-eq .eq-on:active                            { background-position: -128px -119px; }
+#winamp-eq .eq-on[aria-pressed="true"]              { background-position:  -69px -119px; }
+#winamp-eq .eq-on[aria-pressed="true"]:active       { background-position: -187px -119px; }
+
+#winamp-eq .eq-auto                                 { background-position:  -36px -119px; }
+#winamp-eq .eq-auto:active                          { background-position: -154px -119px; }
+#winamp-eq .eq-auto[aria-pressed="true"]            { background-position:  -95px -119px; }
+#winamp-eq .eq-auto[aria-pressed="true"]:active     { background-position: -213px -119px; }
+
+#winamp-eq .eq-presets-btn                          { background-position: -224px -164px; }
+#winamp-eq .eq-presets-btn:active,
+#winamp-eq .eq-presets-btn[aria-expanded="true"]    { background-position: -224px -176px; }
+
+#winamp-eq .eq-on:focus-visible,
+#winamp-eq .eq-auto:focus-visible,
+#winamp-eq .eq-presets-btn:focus-visible,
+#winamp-eq .eq-titlebar-close:focus-visible {
+  outline: 1px dotted #FFCC33;
+  outline-offset: 0;
+}
+
+/* Decorative EQ spectrum well — paints the 113×19 graph background sprite
+   at the canonical (86, 17) slot. Pure overlay, no live spectrum drawn. */
+#winamp-eq .eq-graph {
+  position: absolute;
+  left: 86px;
+  top: 17px;
+  width: 113px;
+  height: 19px;
+  pointer-events: none;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eqmain.png");
+  background-repeat: no-repeat;
+  background-position: 0 -294px;
+  background-size: 275px 315px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+
+/* Decorative preamp slider — sits over the preamp groove painted into the
+   eqmain.png background at (21, 38). The thumb sprite reuses the standard
+   EQ slider thumb at eqmain (0, 164) 11×11. No interaction wired; this is
+   decorative because the audio graph has no preamp node. */
+#winamp-eq .eq-preamp {
+  position: absolute;
+  left: 21px;
+  top: 38px;
+  width: 14px;
+  height: 63px;
+  pointer-events: none;
+  background: transparent;
+}
+#winamp-eq .eq-preamp .eq-preamp-track {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+#winamp-eq .eq-preamp .eq-preamp-thumb {
+  position: absolute;
+  left: 1px;
+  top: 26px;
+  width: 11px;
+  height: 11px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eqmain.png");
+  background-repeat: no-repeat;
+  background-position: 0 -164px;
+  background-size: 275px 315px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+
+/* PRESETS dropdown menu. Positioned just below the PRESETS button at
+   (217, 30); width auto-sized to the longest sprite-text label. Solid
+   black background with a 1px panel border — no CSS gradients (forbidden
+   inside #winamp-eq). Items are sprite-text rendered (text.png 5x6) so
+   no font-family declaration is needed inside this scope. */
+#winamp-eq .eq-presets-menu {
+  position: absolute;
+  left: 217px;
+  top: 30px;
+  min-width: 70px;
+  padding: 2px 0;
+  margin: 0;
+  background-color: #000000;
+  border: 1px solid #00FF66;
+  z-index: 5;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+}
+#winamp-eq .eq-presets-menu[hidden] { display: none; }
+#winamp-eq .eq-preset-item {
+  display: block;
+  padding: 2px 4px;
+  cursor: pointer;
+  background-color: transparent;
+  white-space: nowrap;
+  font-size: 0;
+  line-height: 0;
+}
+#winamp-eq .eq-preset-item:hover {
+  background-color: #00331a;
 }
 
 /* ───────────────────────────────────────────────────────────────────────

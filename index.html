@@ -138,6 +138,25 @@ img {
             </div>
           </div>
           <div id="winamp-eq">
+            <div class="eq-titlebar" aria-hidden="true">
+              <button type="button" class="eq-titlebar-close" aria-label="close eq" tabindex="-1"></button>
+            </div>
+            <button type="button" class="eq-on" aria-pressed="true" aria-label="EQ on/off"></button>
+            <button type="button" class="eq-auto" aria-pressed="false" aria-label="EQ auto"></button>
+            <button type="button" class="eq-presets-btn" aria-haspopup="true" aria-expanded="false" aria-label="presets"></button>
+            <span class="eq-graph" aria-hidden="true"></span>
+            <span class="eq-preamp" aria-hidden="true">
+              <span class="eq-preamp-track"><span class="eq-preamp-thumb"></span></span>
+            </span>
+            <div class="eq-presets-menu" role="menu" hidden>
+              <div class="eq-preset-item" role="menuitem" tabindex="-1" data-preset="Flat" data-label="Flat"></div>
+              <div class="eq-preset-item" role="menuitem" tabindex="-1" data-preset="Rock" data-label="Rock"></div>
+              <div class="eq-preset-item" role="menuitem" tabindex="-1" data-preset="Pop" data-label="Pop"></div>
+              <div class="eq-preset-item" role="menuitem" tabindex="-1" data-preset="Vocal" data-label="Vocal"></div>
+              <div class="eq-preset-item" role="menuitem" tabindex="-1" data-preset="Bass-Heavy" data-label="Bass-Heavy"></div>
+              <div class="eq-preset-item" role="menuitem" tabindex="-1" data-preset="Treble-Heavy" data-label="Treble-Heavy"></div>
+              <div class="eq-preset-item" role="menuitem" tabindex="-1" data-preset="Classical" data-label="Classical"></div>
+            </div>
             <div class="eq-presets" aria-hidden="true">
               <label class="mono dim" for="eq-preset">PRESET</label>
               <select id="eq-preset">
@@ -320,7 +339,13 @@ if (sfxSpan) sfxSpan.addEventListener('click', function () {
 });
 
 var playerMount = document.getElementById('audio-player-mount');
-if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: false });
+// Capture the player handle so the inline EQ-chrome IIFE further down can
+// reach the frozen audio graph (mixer.familyGains) without editing audio/*.
+// `mixer` is a getter on the returned handle; the underlying GainNodes are
+// instantiated lazily inside ensureCtx() on first play(), so consumers MUST
+// null-check before scheduling ramps.
+var dadePlayer = playerMount ? initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: false }) : null;
+if (dadePlayer) window.__dadePlayer = dadePlayer;
 
 // Inject the balance slider next to the volume slider after the player has
 // rendered its DOM. Pure visual control — no wiring into the audio graph.
@@ -683,6 +708,187 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
     scan();
     if (tries > 40) clearInterval(iv);
   }, 50);
+})();
+
+// EQ window chrome wiring — sprite-state ON / AUTO toggles + PRESETS dropdown.
+// The 10 fader inputs (7 wired through familyGain via audio/eq-mixer.js + 3
+// decorative) are NOT EQ filters; they are decorative overlays on top of the
+// per-family fan-in. Real "EQ" behaviour comes from PRESETS that ramp the 7
+// familyGain.gain.value values. The audio graph is frozen — we never touch
+// audio/* and instead reach into globals exposed by the player handle.
+//
+// Preset application uses linearRampToValueAtTime over 80ms to avoid clicks
+// from instantaneous value changes. cancelScheduledValues is called first so
+// rapid preset cycling never queues a stack of pending ramps.
+//
+// ON toggle: aria-pressed=true -> SELECTED sprite; OFF flattens all family
+// gains to 1.0 (bypass) and the next ON click restores the lastPreset.
+// AUTO toggle: visual-only per spec; aria-pressed flip persists.
+// PRESETS dropdown: opens on click, closes on outside-click or second click,
+// items sprite-rendered via window.__waRenderText (text.png 5x6 glyphs).
+(function eqWindowInit() {
+  var eqRoot = document.getElementById('winamp-eq');
+  if (!eqRoot) return;
+  var onBtn      = eqRoot.querySelector('.eq-on');
+  var autoBtn    = eqRoot.querySelector('.eq-auto');
+  var presetsBtn = eqRoot.querySelector('.eq-presets-btn');
+  var menuEl     = eqRoot.querySelector('.eq-presets-menu');
+  if (!onBtn || !autoBtn || !presetsBtn || !menuEl) return;
+
+  var FAMILY_ORDER = ['guitars', 'strings', 'bass', 'pads', 'leads', 'perc', 'other'];
+  // 7-family preset table — see docs/winamp-skin-notes.md "Preset -> family
+  // gain mapping". Values are linear gain multipliers in [0, 1.5].
+  var PRESETS = {
+    'Flat':         [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],
+    'Rock':         [1.20, 0.95, 1.30, 0.85, 1.10, 1.20, 1.00],
+    'Pop':          [1.00, 1.05, 1.10, 1.05, 1.20, 1.10, 1.00],
+    'Vocal':        [0.85, 1.10, 0.80, 0.90, 1.30, 0.95, 1.05],
+    'Bass-Heavy':   [1.10, 0.85, 1.40, 1.10, 0.85, 1.10, 0.90],
+    'Treble-Heavy': [0.95, 1.20, 0.80, 0.95, 1.30, 1.20, 1.05],
+    'Classical':    [0.85, 1.30, 0.90, 1.20, 0.85, 0.90, 1.05]
+  };
+
+  var lastPreset = 'Flat';
+  var eqOn = true;
+
+  try {
+    var savedP = localStorage.getItem('eq_preset');
+    if (savedP && PRESETS[savedP]) lastPreset = savedP;
+    var savedOn = localStorage.getItem('eq_on');
+    if (savedOn === 'false') eqOn = false;
+  } catch (e) {}
+  onBtn.setAttribute('aria-pressed', eqOn ? 'true' : 'false');
+
+  function persist() {
+    try {
+      localStorage.setItem('eq_preset', lastPreset);
+      localStorage.setItem('eq_on', eqOn ? 'true' : 'false');
+    } catch (e) {}
+  }
+
+  // Reach into the frozen audio graph via the player handle. Returns null
+  // until the audio context boots on first play(); callers must no-op on null.
+  function getFamilyGains() {
+    var p = window.__dadePlayer;
+    if (!p) return null;
+    var mx = null;
+    try { mx = p.mixer; } catch (e) { return null; }
+    if (!mx || !mx.familyGains) return null;
+    return mx.familyGains;
+  }
+
+  function rampGains(targets) {
+    var family = getFamilyGains();
+    var ctx = window.__dadeAudioCtx;
+    if (!family || !ctx) return false;
+    var now = ctx.currentTime;
+    for (var i = 0; i < FAMILY_ORDER.length; i++) {
+      var g = family.get(FAMILY_ORDER[i]);
+      if (!g || !g.gain) continue;
+      try {
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(g.gain.value, now);
+        g.gain.linearRampToValueAtTime(targets[i], now + 0.08);
+      } catch (e) {}
+    }
+    return true;
+  }
+
+  function applyPreset(name) {
+    var arr = PRESETS[name];
+    if (!arr) return;
+    lastPreset = name;
+    persist();
+    if (eqOn) rampGains(arr);
+  }
+
+  // ON button — bypass mode. When OFF, all family gains ramp to flat (1.0)
+  // so the per-family fan-in becomes audibly identity. Re-enabling restores
+  // the lastPreset values. Either way the wired faders keep rendering at
+  // their last user-set positions; that's intentional per spec.
+  onBtn.addEventListener('click', function () {
+    eqOn = !eqOn;
+    onBtn.setAttribute('aria-pressed', eqOn ? 'true' : 'false');
+    persist();
+    if (eqOn) {
+      var arr = PRESETS[lastPreset] || PRESETS.Flat;
+      rampGains(arr);
+    } else {
+      rampGains([1, 1, 1, 1, 1, 1, 1]);
+    }
+  });
+
+  // AUTO toggle — sprite-state visual only per spec. No audio behaviour.
+  autoBtn.addEventListener('click', function () {
+    var on = autoBtn.getAttribute('aria-pressed') === 'true';
+    autoBtn.setAttribute('aria-pressed', on ? 'false' : 'true');
+  });
+
+  // Render preset menu items via window.__waRenderText (text.png 5x6 glyphs).
+  // Static one-shot render at init; no MutationObserver needed because the
+  // dropdown text never changes after construction.
+  (function renderMenuItems() {
+    var fn = window.__waRenderText;
+    if (typeof fn !== 'function') return;
+    var items = menuEl.querySelectorAll('[data-preset]');
+    for (var i = 0; i < items.length; i++) {
+      fn(items[i], items[i].getAttribute('data-label') || items[i].getAttribute('data-preset'));
+    }
+  })();
+
+  // Dropdown open / close — click toggles, outside-click closes. stopProp on
+  // the button click prevents the document handler from immediately closing
+  // the menu we just opened.
+  presetsBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = !menuEl.hidden;
+    menuEl.hidden = open;
+    presetsBtn.setAttribute('aria-expanded', open ? 'false' : 'true');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (menuEl.hidden) return;
+    var t = e.target;
+    if (presetsBtn.contains(t) || menuEl.contains(t)) return;
+    menuEl.hidden = true;
+    presetsBtn.setAttribute('aria-expanded', 'false');
+  });
+
+  Array.prototype.forEach.call(menuEl.querySelectorAll('[data-preset]'), function (item) {
+    item.addEventListener('click', function () {
+      applyPreset(item.getAttribute('data-preset'));
+      menuEl.hidden = true;
+      presetsBtn.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  // EQ titlebar focus / blur sprite swap. Active sprite paints by default; on
+  // window blur we add .is-inactive so the CSS swaps to the inactive strip.
+  var titlebar = eqRoot.querySelector('.eq-titlebar');
+  if (titlebar) {
+    function syncFocus() {
+      titlebar.classList.toggle('is-inactive', !document.hasFocus());
+    }
+    syncFocus();
+    window.addEventListener('focus', syncFocus);
+    window.addEventListener('blur', syncFocus);
+  }
+
+  // Hydrate the audio graph with the saved preset on first play. The audio
+  // context only exists after a user gesture, so we cannot ramp at load
+  // time. Instead, listen on the body click delegate that already flips
+  // body.track-loaded — by the time that class lands, ensureCtx() has run
+  // and familyGains is populated.
+  var hydrated = false;
+  function tryHydrate() {
+    if (hydrated) return;
+    if (!eqOn) { hydrated = true; return; }
+    var arr = PRESETS[lastPreset];
+    if (arr && rampGains(arr)) hydrated = true;
+  }
+  document.body.addEventListener('click', function () {
+    setTimeout(tryHydrate, 0);
+  }, { capture: true });
 })();
 
 initSFX();

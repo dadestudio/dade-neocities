@@ -405,6 +405,146 @@ the empty-track region:
 `background-size: 307px 10px` keeps the thumb sprite at x = 248 fully
 off-screen so no thumb is rendered.
 
+## EQ window — base 2.91
+
+The equalizer window (`#winamp-eq`) renders as a 275 × 116 sprite-backed
+panel sitting directly underneath `#winamp-chrome` inside `#winamp-stack`
+with no gap and no flex container — vanilla block stacking at 275 px
+width. The full EQ window background (titlebar + ON / AUTO band, EQ graph
+well, dB scale, 10 fader grooves) is painted from `eqmain.png` on the
+`#winamp-eq` element via `background-image` + `background-position: 0 0`
++ `background-size: 275px 315px` and `image-rendering: pixelated`.
+
+Sprite coordinates are taken from the captbaritone/webamp checked-in
+`packages/webamp/js/skinSprites.ts` (`EQMAIN`) and on-window placement
+from `packages/webamp/css/equalizer-window.css` — NOT from
+`skins.webamp.org` derivatives. Sheet `eqmain.png` is `275 × 315`
+(8-bit colormap PNG), verified in the existing inventory table above.
+
+### Sprites used (sheet: `eqmain.png` 275 × 315)
+
+| Sprite                              | sx  | sy  | w   | h  |
+| ----------------------------------- | --- | --- | --- | -- |
+| `EQ_WINDOW_BACKGROUND`              | 0   | 0   | 275 | 116 |
+| `EQ_TITLE_BAR_SELECTED` (active)    | 0   | 134 | 275 | 14 |
+| `EQ_TITLE_BAR` (inactive)           | 0   | 149 | 275 | 14 |
+| `EQ_CLOSE_BUTTON`                   | 0   | 116 | 9   | 9  |
+| `EQ_CLOSE_BUTTON_ACTIVE`            | 0   | 125 | 9   | 9  |
+| `EQ_ON_BUTTON`                      | 10  | 119 | 26  | 12 |
+| `EQ_ON_BUTTON_DEPRESSED`            | 128 | 119 | 26  | 12 |
+| `EQ_ON_BUTTON_SELECTED`             | 69  | 119 | 26  | 12 |
+| `EQ_ON_BUTTON_SELECTED_DEPRESSED`   | 187 | 119 | 26  | 12 |
+| `EQ_AUTO_BUTTON`                    | 36  | 119 | 32  | 12 |
+| `EQ_AUTO_BUTTON_DEPRESSED`          | 154 | 119 | 32  | 12 |
+| `EQ_AUTO_BUTTON_SELECTED`           | 95  | 119 | 32  | 12 |
+| `EQ_AUTO_BUTTON_SELECTED_DEPRESSED` | 213 | 119 | 32  | 12 |
+| `EQ_PRESETS_BUTTON`                 | 224 | 164 | 44  | 12 |
+| `EQ_PRESETS_BUTTON_SELECTED`        | 224 | 176 | 44  | 12 |
+| `EQ_GRAPH_BACKGROUND`               | 0   | 294 | 113 | 19 |
+| `EQ_SLIDER_THUMB`                   | 0   | 164 | 11  | 11 |
+| `EQ_SLIDER_THUMB_SELECTED`          | 0   | 176 | 11  | 11 |
+
+### On-window placement
+
+Origin (0, 0) is the top-left pixel of `#winamp-eq`. All overlay
+elements are absolutely positioned at the canonical Webamp coordinates
+from `equalizer-window.css`:
+
+| Element                       | left | top | w   | h  | DOM class             |
+| ----------------------------- | ---- | --- | --- | -- | --------------------- |
+| Titlebar strip                | 0    | 0   | 275 | 14 | `.eq-titlebar`        |
+| Close button                  | 264  | 3   | 9   | 9  | `.eq-titlebar-close`  |
+| ON button                     | 14   | 18  | 26  | 12 | `.eq-on`              |
+| AUTO button                   | 40   | 18  | 32  | 12 | `.eq-auto`            |
+| PRESETS button                | 217  | 18  | 44  | 12 | `.eq-presets-btn`     |
+| EQ graph well (decorative)    | 86   | 17  | 113 | 19 | `.eq-graph`           |
+| Preamp slider (decorative)    | 21   | 38  | 14  | 63 | `.eq-preamp`          |
+| Band 60                       | 78   | 38  | 14  | 63 | `.eq-fader` 1st       |
+| Band 170                      | 96   | 38  | 14  | 63 | `.eq-fader` 2nd       |
+| Band 310                      | 114  | 38  | 14  | 63 | `.eq-fader` 3rd       |
+| Band 600                      | 132  | 38  | 14  | 63 | `.eq-fader` 4th       |
+| Band 1000                     | 150  | 38  | 14  | 63 | `.eq-fader` 5th       |
+| Band 3000                     | 168  | 38  | 14  | 63 | `.eq-fader` 6th       |
+| Band 6000                     | 186  | 38  | 14  | 63 | `.eq-fader` 7th       |
+| Band 12000                    | 204  | 38  | 14  | 63 | `.eq-faders-decor` 1st |
+| Band 14000                    | 222  | 38  | 14  | 63 | `.eq-faders-decor` 2nd |
+| Band 16000                    | 240  | 38  | 14  | 63 | `.eq-faders-decor` 3rd |
+
+Bands 1 – 7 are wired through `audio/eq-mixer.js` `familyGain` nodes
+(rendered by `renderMixerUI` once the audio context boots on first
+play). Bands 8 – 10 are decorative overlays only — neither they nor the
+preamp connect to any audio node. Per the project lock the audio graph
+is frozen (no biquad EQ filters); "EQ" colour comes from the 7-family
+PRESETS table below applied to the `familyGain` fan-in.
+
+### Sprite-state truth table for ON / AUTO / PRESETS
+
+ON and AUTO buttons each have four sprites (normal, depressed, selected,
+selected-depressed). `aria-pressed="true"` selects the lit (selected)
+row; `:active` selects the pressed (depressed) column. PRESETS only has
+two sprites; the SELECTED variant paints while the dropdown is open
+(`aria-expanded="true"`) and on `:active`.
+
+| State                                | ON sprite          | AUTO sprite        |
+| ------------------------------------ | ------------------ | ------------------ |
+| `aria-pressed="false"`               | `(10, 119)`        | `(36, 119)`        |
+| `aria-pressed="false"` + `:active`   | `(128, 119)`       | `(154, 119)`       |
+| `aria-pressed="true"`                | `(69, 119)`        | `(95, 119)`        |
+| `aria-pressed="true"` + `:active`    | `(187, 119)`       | `(213, 119)`       |
+
+| State                                | PRESETS sprite     |
+| ------------------------------------ | ------------------ |
+| default                              | `(224, 164)`       |
+| `aria-expanded="true"` or `:active`  | `(224, 176)`       |
+
+### Active vs inactive titlebar
+
+The EQ window background already bakes the active titlebar variant into
+the top 14 px of `EQ_WINDOW_BACKGROUND`. We additionally paint a
+`.eq-titlebar` strip from `EQ_TITLE_BAR_SELECTED` (`0, 134`) so a
+later/blur-based class swap to `.is-inactive` (`background-position: 0
+-149px`, the `EQ_TITLE_BAR` sprite) flips the chrome without repainting
+the entire window background. The inline EQ-window IIFE in `index.html`
+toggles `.is-inactive` on `window.blur` and clears it on `window.focus`
+via `document.hasFocus()`.
+
+## Preset → family gain mapping
+
+The PRESETS dropdown in `#winamp-eq` ramps the 7 `familyGain.gain.value`
+nodes (created in `audio/eq-mixer.js` `createMixer`) to the table below
+via `linearRampToValueAtTime` over 80 ms. `cancelScheduledValues` runs
+first so rapid preset cycling never queues a stack of pending ramps and
+never freezes the audio thread (verified: clicking through all 7 presets
+in < 2 s leaves the tab responsive).
+
+Family order is the canonical `FAMILY_ORDER` exported by
+`audio/eq-mixer.js`: `['guitars', 'strings', 'bass', 'pads', 'leads',
+'perc', 'other']`. Values are linear gain multipliers in `[0, 1.5]`
+(matching the `G_MIN` / `G_MAX` clamp inside `eq-mixer.js`).
+
+| Preset       | guitars | strings | bass | pads | leads | perc | other |
+| ------------ | ------- | ------- | ---- | ---- | ----- | ---- | ----- |
+| Flat         | 1.00    | 1.00    | 1.00 | 1.00 | 1.00  | 1.00 | 1.00  |
+| Rock         | 1.20    | 0.95    | 1.30 | 0.85 | 1.10  | 1.20 | 1.00  |
+| Pop          | 1.00    | 1.05    | 1.10 | 1.05 | 1.20  | 1.10 | 1.00  |
+| Vocal        | 0.85    | 1.10    | 0.80 | 0.90 | 1.30  | 0.95 | 1.05  |
+| Bass-Heavy   | 1.10    | 0.85    | 1.40 | 1.10 | 0.85  | 1.10 | 0.90  |
+| Treble-Heavy | 0.95    | 1.20    | 0.80 | 0.95 | 1.30  | 1.20 | 1.05  |
+| Classical    | 0.85    | 1.30    | 0.90 | 1.20 | 0.85  | 0.90 | 1.05  |
+
+ON toggle behaviour: when `aria-pressed="false"` the IIFE ramps every
+family gain to flat (`1.0`) so the per-family fan-in is audibly
+identity (bypass). Re-enabling restores `lastPreset` from
+`localStorage.eq_preset`. The 10 fader inputs keep rendering at their
+last user-set positions either way; they are decorative overlays on top
+of family gain (no biquad filters).
+
+The audio graph is reached via `window.__dadePlayer.mixer.familyGains`
+(a `Map` of family-name → `GainNode`), captured from the `initPlayer`
+return value in `index.html`. `audio/*` is byte-identical to HEAD~0
+across this run — verified with `git diff HEAD~1 -- audio/ | wc -l`
+returning `0`.
+
 ## DOM changes
 
 - Removed `.wa-stack-extras` and its sole child `#dade-sfx-toggle`
