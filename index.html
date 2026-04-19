@@ -124,10 +124,14 @@ img {
               <span class="wa-channels">stereo</span>
             </div>
             <span class="wa-posbar" aria-hidden="true"></span>
+            <input type="range" data-role="posbar" min="0" max="100" value="0" step="1" aria-label="position" tabindex="-1">
             <span class="wa-monoster" aria-hidden="true" data-mode="stereo"></span>
             <select id="track-select" class="wa-track-select" hidden aria-hidden="true"></select>
             <canvas id="viz" class="wa-viz" width="280" height="48" hidden aria-hidden="true"></canvas>
             <div id="audio-player-mount"></div>
+            <button type="button" class="wa-eject" aria-label="eject"></button>
+            <span class="wa-tooltip" data-for="vol" hidden></span>
+            <span class="wa-tooltip" data-for="bal" hidden></span>
             <div class="wa-clutter-bar">
               <button class="wa-clutter" id="wa-eq" aria-pressed="true" type="button" title="equalizer">EQ</button>
               <button class="wa-clutter" id="wa-pl" aria-pressed="false" type="button" title="playlist">PL</button>
@@ -451,6 +455,7 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
     for (var i = 0; i < s.length; i++) glyphs.push(makeTextGlyph(s[i]));
     el.replaceChildren.apply(el, glyphs);
   }
+  window.__waRenderText = renderText;
   function renderTextDigits(el, text) {
     var s = String(text == null ? '' : text).replace(/[^\d]/g, '');
     renderText(el, s);
@@ -582,6 +587,102 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
     observer = new MutationObserver(apply);
     observer.observe(faders, { childList: true, subtree: true });
   } catch (e) {}
+})();
+
+// Toggle body.track-loaded based on transport-button clicks inside the
+// audio mount. Posbar thumb sprite is gated on this class — visible only
+// after the user has interacted with play/pause/next/prev/toggle, hidden
+// again on stop. Pure click-delegate; audio/* untouched.
+(function trackLoadedClass() {
+  var mount = document.getElementById('audio-player-mount');
+  if (!mount) return;
+  mount.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'play' || act === 'pause' || act === 'next' || act === 'prev' || act === 'toggle') {
+      document.body.classList.add('track-loaded');
+    } else if (act === 'stop') {
+      document.body.classList.remove('track-loaded');
+    }
+  });
+})();
+
+// Volume + balance bitmap-font tooltips. Show on slider input, hide on
+// blur with a 1200ms debounce (so the readout lingers briefly after the
+// user releases the slider). Glyphs are rendered via the spriteText
+// renderText helper exposed on window.__waRenderText. Tooltip nodes live
+// in #winamp-chrome OUTSIDE #audio-player-mount, so the playerMount
+// MutationObserver in spriteText never fires from these writes; no new
+// observer is introduced here.
+(function sliderTooltips() {
+  var chrome = document.getElementById('winamp-chrome');
+  if (!chrome) return;
+  var volTip = chrome.querySelector('.wa-tooltip[data-for="vol"]');
+  var balTip = chrome.querySelector('.wa-tooltip[data-for="bal"]');
+  if (!volTip && !balTip) return;
+
+  function render(el, text) {
+    var fn = window.__waRenderText;
+    if (typeof fn === 'function') fn(el, text);
+    else el.textContent = text;
+  }
+
+  function volText(el) {
+    var v = parseFloat(el.value);
+    if (!isFinite(v)) v = 0;
+    var min = parseFloat(el.min); if (!isFinite(min)) min = 0;
+    var max = parseFloat(el.max); if (!isFinite(max)) max = 100;
+    var span = max - min || 1;
+    var pct = Math.round(((v - min) / span) * 100);
+    if (pct < 0) pct = 0; if (pct > 100) pct = 100;
+    return 'VOLUME: ' + pct + '%';
+  }
+  function balText(el) {
+    var v = parseFloat(el.value);
+    if (!isFinite(v)) v = 0;
+    var min = parseFloat(el.min); if (!isFinite(min)) min = -1;
+    var max = parseFloat(el.max); if (!isFinite(max)) max = 1;
+    var range = Math.max(Math.abs(min), Math.abs(max)) || 1;
+    var pct = Math.round((Math.abs(v) / range) * 100);
+    if (pct < 0) pct = 0; if (pct > 100) pct = 100;
+    if (pct === 0) return 'BALANCE: CENTER';
+    return 'BALANCE: ' + (v < 0 ? 'LEFT' : 'RIGHT') + ' ' + pct + '%';
+  }
+
+  function bind(srcEl, tipEl, formatter) {
+    if (!srcEl || !tipEl || srcEl.__tipBound) return;
+    srcEl.__tipBound = true;
+    var hideTimer = null;
+    function show() {
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      render(tipEl, formatter(srcEl));
+      tipEl.hidden = false;
+    }
+    function scheduleHide() {
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(function () {
+        tipEl.hidden = true;
+        hideTimer = null;
+      }, 1200);
+    }
+    srcEl.addEventListener('input', show);
+    srcEl.addEventListener('blur',  scheduleHide);
+  }
+
+  function scan() {
+    var mount = document.getElementById('audio-player-mount');
+    if (!mount) return;
+    bind(mount.querySelector('input[data-role="vol"]'), volTip, volText);
+    bind(mount.querySelector('input[data-role="bal"]'), balTip, balText);
+  }
+  scan();
+  var tries = 0;
+  var iv = setInterval(function () {
+    tries += 1;
+    scan();
+    if (tries > 40) clearInterval(iv);
+  }, 50);
 })();
 
 initSFX();
