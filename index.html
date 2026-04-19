@@ -512,6 +512,10 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
 
   var playerMount = document.getElementById('audio-player-mount');
   if (playerMount) {
+    // Loop-safe: attachAll() never writes to the playerMount subtree itself;
+    // it only queries and calls attach(), which is idempotent via the
+    // el.__spriteAttached JS-property guard. Inner paint() mutations are
+    // contained by their own per-element disconnect-during-write pattern.
     new MutationObserver(attachAll).observe(playerMount, { childList: true, subtree: true });
   }
 
@@ -548,16 +552,23 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
   var FREQ = ['60', '170', '310', '600', '1K', '3K', '6K'];
   var faders = document.getElementById('eq-faders');
   if (!faders) return;
+  var observer = null;
   function apply() {
-    var cells = faders.querySelectorAll('.eq-fader');
-    for (var i = 0; i < cells.length && i < FREQ.length; i++) {
-      var lbl = cells[i].querySelector('.eq-fader-label');
-      if (lbl) lbl.textContent = FREQ[i];
+    if (observer) observer.disconnect();
+    try {
+      var cells = faders.querySelectorAll('.eq-fader');
+      for (var i = 0; i < cells.length && i < FREQ.length; i++) {
+        var lbl = cells[i].querySelector('.eq-fader-label');
+        if (lbl && lbl.textContent !== FREQ[i]) lbl.textContent = FREQ[i];
+      }
+    } finally {
+      if (observer) observer.observe(faders, { childList: true, subtree: true });
     }
   }
   apply();
   try {
-    new MutationObserver(apply).observe(faders, { childList: true, subtree: true });
+    observer = new MutationObserver(apply);
+    observer.observe(faders, { childList: true, subtree: true });
   } catch (e) {}
 })();
 
