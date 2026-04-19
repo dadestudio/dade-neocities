@@ -4,6 +4,10 @@
  * (global Soundfont) using the FluidR3_GM SoundFont, mixes through a master
  * gain → AnalyserNode → destination. SFX module shares the same context via
  * globalThis.__dadeAudioCtx.
+ *
+ * Scheduling is a rolling lookahead (~500 ms) driven by rAF — never schedule
+ * the whole track up front, or the WebAudio renderer will fault on long MIDIs
+ * (thousands of BufferSourceNodes saturate the audio thread).
  */
 
 const GM_NAMES = [
@@ -41,14 +45,8 @@ const GM_NAMES = [
 const LS_VOL = 'lofi_volume';
 const LS_IDX = 'lofi_track';
 const SF_HOST = 'FluidR3_GM';
-
-function getCtx() {
-  if (!globalThis.__dadeAudioCtx) {
-    const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
-    globalThis.__dadeAudioCtx = new AC();
-  }
-  return globalThis.__dadeAudioCtx;
-}
+const FALLBACK_INST = 'acoustic_grand_piano';
+const SCHED_LOOKAHEAD = 0.5;
 
 function lsGetNum(k, d) {
   try { const v = parseFloat(localStorage.getItem(k)); return isFinite(v) ? v : d; } catch (_) { return d; }
@@ -63,43 +61,25 @@ function fmtTime(s) {
 
 function buildFullDOM(mountEl, compact) {
   const cls = compact ? 'audio-mount compact' : 'audio-mount full';
-  if (compact) {
-    mountEl.innerHTML =
-      '<h2 class="panel-header">// audio</h2>' +
-      '<div class="' + cls + '">' +
-        '<div class="lcd lcd-scroll"><span data-role="lcd">[ loading... ]</span></div>' +
-        '<div class="player-controls">' +
-          '<button class="btn" data-act="toggle">[ &#9654; ]</button>' +
-        '</div>' +
-        '<canvas data-role="viz" width="200" height="24"></canvas>' +
-      '</div>';
-  } else {
-    mountEl.innerHTML =
-      '<h2 class="panel-header">// winamp // FluidR3_GM</h2>' +
-      '<div class="' + cls + '">' +
-        '<div class="lcd lcd-scroll"><span data-role="lcd">[ press play ]</span></div>' +
-        '<div class="mono dim" style="margin-top:var(--space-1);">' +
-          '<span data-role="time">0:00 / 0:00</span> ' +
-          '<span class="sf-loading" data-role="loading"></span>' +
-        '</div>' +
-        '<div class="player-controls">' +
-          '<button class="btn" data-act="prev" title="prev">&#9664;&#9664;</button>' +
-          '<button class="btn" data-act="play" title="play">&#9654;</button>' +
-          '<button class="btn" data-act="pause" title="pause">&#10074;&#10074;</button>' +
-          '<button class="btn" data-act="stop" title="stop">&#9632;</button>' +
-          '<button class="btn" data-act="next" title="next">&#9654;&#9654;</button>' +
-        '</div>' +
-        '<input type="range" class="vol" data-role="vol" min="0" max="100" value="60" aria-label="volume">' +
-        '<canvas data-role="viz" width="280" height="48"></canvas>' +
-      '</div>';
-  }
-  return {
-    lcd: mountEl.querySelector('[data-role=lcd]'),
-    time: mountEl.querySelector('[data-role=time]'),
-    loading: mountEl.querySelector('[data-role=loading]'),
-    vol: mountEl.querySelector('[data-role=vol]'),
-    viz: mountEl.querySelector('[data-role=viz]'),
-  };
+  mountEl.innerHTML = compact
+    ? '<h2 class="panel-header">// audio</h2><div class="' + cls + '">'
+        + '<div class="lcd lcd-scroll"><span data-role="lcd">[ loading... ]</span></div>'
+        + '<div class="player-controls"><button class="btn" data-act="toggle">[ &#9654; ]</button></div>'
+        + '<canvas data-role="viz" width="200" height="24"></canvas></div>'
+    : '<h2 class="panel-header">// winamp // FluidR3_GM</h2><div class="' + cls + '">'
+        + '<div class="lcd lcd-scroll"><span data-role="lcd">[ press play ]</span></div>'
+        + '<div class="mono dim" style="margin-top:var(--space-1);"><span data-role="time">0:00 / 0:00</span> <span class="sf-loading" data-role="loading"></span></div>'
+        + '<div class="player-controls">'
+          + '<button class="btn" data-act="prev" title="prev">&#9664;&#9664;</button>'
+          + '<button class="btn" data-act="play" title="play">&#9654;</button>'
+          + '<button class="btn" data-act="pause" title="pause">&#10074;&#10074;</button>'
+          + '<button class="btn" data-act="stop" title="stop">&#9632;</button>'
+          + '<button class="btn" data-act="next" title="next">&#9654;&#9654;</button>'
+        + '</div>'
+        + '<input type="range" class="vol" data-role="vol" min="0" max="100" value="60" aria-label="volume">'
+        + '<canvas data-role="viz" width="280" height="48"></canvas></div>';
+  const q = (s) => mountEl.querySelector(s);
+  return { lcd: q('[data-role=lcd]'), time: q('[data-role=time]'), loading: q('[data-role=loading]'), vol: q('[data-role=vol]'), viz: q('[data-role=viz]') };
 }
 
 export function initPlayer({ mountEl, tracks, compact = false }) {
@@ -108,31 +88,42 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
   const Soundfont = globalThis.Soundfont;
   if (!Midi || !Soundfont) { console.error('player: Midi/Soundfont globals missing'); return null; }
 
-  const ctx = getCtx();
-  const masterGain = ctx.createGain();
-  const analyser = ctx.createAnalyser();
-  analyser.fftSize = 256;
-  masterGain.connect(analyser); analyser.connect(ctx.destination);
-  globalThis.__dadeAudioMasterIn = masterGain;
-  globalThis.__dadeAudioAnalyser = analyser;
-
   const ui = buildFullDOM(mountEl, compact);
   const instrumentCache = new Map();
 
+  let ctx = null, masterGain = null, analyser = null, freq = null;
   let uiVol = lsGetNum(LS_VOL, 0.6);
   let trackIdx = Math.max(0, Math.min(tracks.length - 1, Math.floor(lsGetNum(LS_IDX, 0))));
   let parsedMidi = null;
   let trackInstruments = [];
+  let noteList = [];
+  let noteCursor = 0;
   let totalDur = 0;
   let offsetSec = 0;
   let playheadStart = 0;
   let activeNotes = [];
   let isPlaying = false;
   let pendingTrack = null;
-  applyVolume();
+  let scheduleErrorLogged = false;
   if (ui.vol) ui.vol.value = String(Math.round(uiVol * 100));
 
-  function applyVolume() { masterGain.gain.value = uiVol; }
+  function ensureCtx() {
+    if (ctx) return;
+    const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
+    if (!AC) throw new Error('WebAudio unsupported');
+    ctx = globalThis.__dadeAudioCtx || new AC();
+    globalThis.__dadeAudioCtx = ctx;
+    masterGain = ctx.createGain();
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    masterGain.connect(analyser); analyser.connect(ctx.destination);
+    freq = new Uint8Array(analyser.frequencyBinCount);
+    globalThis.__dadeAudioMasterIn = masterGain;
+    globalThis.__dadeAudioAnalyser = analyser;
+    applyVolume();
+  }
+
+  function applyVolume() { if (masterGain) masterGain.gain.value = uiVol; }
   function setVolume(v) { uiVol = Math.max(0, Math.min(1, Number(v))); lsSet(LS_VOL, uiVol); applyVolume(); }
 
   function setLCD() {
@@ -149,14 +140,20 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
 
   async function ensureInstrument(name) {
     if (instrumentCache.has(name)) return instrumentCache.get(name);
-    const p = Soundfont.instrument(ctx, name, {
+    const opts = {
       soundfont: SF_HOST,
       format: 'mp3',
-      nameToUrl: (n, sf, fmt) => `/sounds/soundfonts/${sf}/${n}-mp3.js`,
+      nameToUrl: (n, sf) => `/sounds/soundfonts/${sf}/${n}-mp3.js`,
       destination: masterGain,
-    }).then((inst) => {
-      instrumentCache.set(name, inst); return inst;
-    });
+    };
+    const p = Soundfont.instrument(ctx, name, opts)
+      .catch((err) => {
+        if (name === FALLBACK_INST) throw err;
+        console.warn('player: ' + name + ' unavailable, falling back to ' + FALLBACK_INST, err);
+        return Soundfont.instrument(ctx, FALLBACK_INST, opts);
+      })
+      .then((inst) => { instrumentCache.set(name, inst); return inst; })
+      .catch((err) => { instrumentCache.delete(name); throw err; });
     instrumentCache.set(name, p);
     return p;
   }
@@ -164,6 +161,7 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
   async function loadTrack(idx) {
     pendingTrack = idx;
     stopAllNotes(); offsetSec = 0; isPlaying = false;
+    parsedMidi = null;
     const tr = tracks[idx];
     setLCD();
     if (ui.loading) ui.loading.textContent = '[ loading midi... ]';
@@ -185,25 +183,46 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
     parsedMidi = midi;
     trackInstruments = playable.map((t) => ({ inst: nameMap.get(programNameFor(t)), notes: t.notes }));
     totalDur = midi.duration || playable.reduce((m, t) => Math.max(m, t.notes.reduce((mm, n) => Math.max(mm, n.time + n.duration), 0)), 0);
+    noteList = [];
+    for (let i = 0; i < trackInstruments.length; i++) {
+      const ti = trackInstruments[i];
+      for (const n of ti.notes) {
+        noteList.push({ time: n.time, duration: n.duration, name: n.name, velocity: n.velocity || 0.7, instIdx: i });
+      }
+    }
+    noteList.sort((a, b) => a.time - b.time);
     if (ui.loading) ui.loading.textContent = '';
     return midi;
   }
 
-  function scheduleFromOffset() {
+  function startPlayback() {
     activeNotes = [];
-    const startCtx = ctx.currentTime + 0.05;
-    playheadStart = startCtx - offsetSec;
-    for (const ti of trackInstruments) {
-      for (const n of ti.notes) {
-        if (n.time + n.duration <= offsetSec) continue;
-        const when = startCtx + Math.max(0, n.time - offsetSec);
-        const dur = n.duration - Math.max(0, offsetSec - n.time);
-        try {
-          const node = ti.inst.play(n.name, when, { duration: Math.max(0.05, dur), gain: Math.max(0.05, n.velocity || 0.7) });
-          activeNotes.push(node);
-        } catch (_) { /* ignore individual note errors */ }
+    scheduleErrorLogged = false;
+    playheadStart = ctx.currentTime + 0.05 - offsetSec;
+    noteCursor = 0;
+    while (noteCursor < noteList.length && noteList[noteCursor].time + noteList[noteCursor].duration <= offsetSec) noteCursor++;
+    isPlaying = true;
+  }
+
+  function scheduleAhead() {
+    if (!isPlaying || !ctx) return;
+    const horizon = ctx.currentTime + SCHED_LOOKAHEAD;
+    while (noteCursor < noteList.length) {
+      const n = noteList[noteCursor];
+      const when = playheadStart + n.time;
+      if (when > horizon) break;
+      noteCursor++;
+      const ti = trackInstruments[n.instIdx];
+      if (!ti || !ti.inst) continue;
+      const dur = Math.max(0.05, n.duration - Math.max(0, offsetSec - n.time));
+      try {
+        const node = ti.inst.play(n.name, Math.max(when, ctx.currentTime), { duration: dur, gain: Math.max(0.05, n.velocity) });
+        if (node) activeNotes.push(node);
+      } catch (e) {
+        if (!scheduleErrorLogged) { console.error('player: note schedule error', e); scheduleErrorLogged = true; }
       }
     }
+    if (activeNotes.length > 256) activeNotes = activeNotes.slice(-128);
   }
 
   function stopAllNotes() {
@@ -217,15 +236,23 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
   }
 
   async function play() {
-    if (!parsedMidi || pendingTrack !== trackIdx) {
-      try { await loadTrack(trackIdx); } catch (e) { console.error(e); return; }
+    try {
+      ensureCtx();
+      if (ctx.state === 'suspended') await ctx.resume();
+      if (!parsedMidi || pendingTrack !== trackIdx) {
+        await loadTrack(trackIdx);
+      }
+      if (!parsedMidi) return;
+      if (ctx.state === 'suspended') await ctx.resume();
+      startPlayback();
+    } catch (e) {
+      console.error('player: play failed', e);
+      isPlaying = false;
+      if (ui.loading) ui.loading.textContent = '[ error: ' + (e && e.message ? e.message : e) + ' ]';
     }
-    if (ctx.state === 'suspended') await ctx.resume();
-    scheduleFromOffset();
-    isPlaying = true;
   }
   function pause() {
-    if (!isPlaying) return;
+    if (!isPlaying || !ctx) return;
     offsetSec = Math.max(0, ctx.currentTime - playheadStart);
     stopAllNotes(); isPlaying = false;
   }
@@ -240,7 +267,6 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
     if (autoplay) await play();
   }
 
-  // Controls
   mountEl.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-act]'); if (!btn) return;
     const act = btn.dataset.act;
@@ -253,15 +279,14 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
   });
   if (ui.vol) ui.vol.addEventListener('input', () => setVolume(parseInt(ui.vol.value, 10) / 100));
 
-  // rAF tick: viz + time + auto-advance
   const c2d = ui.viz && ui.viz.getContext('2d');
   const VW = ui.viz ? ui.viz.width : 0;
   const VH = ui.viz ? ui.viz.height : 0;
   const BARS = 32;
-  const freq = new Uint8Array(analyser.frequencyBinCount);
   function tick() {
     requestAnimationFrame(tick);
-    if (c2d) {
+    scheduleAhead();
+    if (c2d && analyser && freq) {
       analyser.getByteFrequencyData(freq);
       c2d.fillStyle = '#000033'; c2d.fillRect(0, 0, VW, VH);
       const bw = VW / BARS;
@@ -276,7 +301,7 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
         c2d.fillRect(b * bw + 1, VH - h, Math.max(1, bw - 2), h);
       }
     }
-    if (isPlaying && parsedMidi) {
+    if (isPlaying && parsedMidi && ctx) {
       const elapsed = Math.max(0, ctx.currentTime - playheadStart);
       if (ui.time) ui.time.textContent = fmtTime(elapsed) + ' / ' + fmtTime(totalDur);
       if (totalDur > 0 && elapsed >= totalDur - 0.05) { isPlaying = false; offsetSec = 0; setTrackIndex((trackIdx + 1) % tracks.length, true); }
