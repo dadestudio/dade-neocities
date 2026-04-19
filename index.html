@@ -105,11 +105,20 @@ img {
         <div id="winamp-stack">
           <div id="winamp-chrome">
             <div class="wa-titlebar" aria-hidden="true"></div>
+            <span class="wa-clutter-vbar" aria-hidden="true">
+              <span class="wa-clutter-vbtn" data-clutter="o" tabindex="-1"></span>
+              <span class="wa-clutter-vbtn" data-clutter="a" tabindex="-1"></span>
+              <span class="wa-clutter-vbtn" data-clutter="i" tabindex="-1"></span>
+              <span class="wa-clutter-vbtn" data-clutter="d" tabindex="-1"></span>
+              <span class="wa-clutter-vbtn" data-clutter="v" tabindex="-1"></span>
+            </span>
             <div class="wa-readout" aria-hidden="true">
               <span class="wa-bitrate">128 kbps</span>
               <span class="wa-srate">44 kHz</span>
               <span class="wa-channels">stereo</span>
             </div>
+            <span class="wa-posbar" aria-hidden="true"></span>
+            <span class="wa-monoster" aria-hidden="true" data-mode="stereo"></span>
             <select id="track-select" class="wa-track-select" hidden aria-hidden="true"></select>
             <canvas id="viz" class="wa-viz" width="280" height="48" hidden aria-hidden="true"></canvas>
             <div id="audio-player-mount"></div>
@@ -153,9 +162,6 @@ img {
               </div>
             </div>
           </div>
-          <div class="wa-stack-extras">
-            <span id="dade-sfx-toggle" class="btn" role="button" tabindex="0">[ SFX: OFF ]</span>
-          </div>
         </div>
       </section>
 
@@ -197,6 +203,7 @@ img {
         <h2 class="panel-header">// fx</h2>
         <button class="btn" id="toggle-crt">[ CRT: ON ]</button>
         <button class="btn" id="toggle-stars">[ STARS: ON ]</button>
+        <span id="dade-sfx-toggle" class="btn" role="button" tabindex="0">[ SFX: OFF ]</span>
       </div>
       <div class="widget" id="status-scroller-widget">
         <h2 class="panel-header">// status</h2>
@@ -375,6 +382,164 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
     scan();
     if (tries > 40) clearInterval(iv);
   }, 50);
+})();
+
+// Sprite-text renderer — converts plain text written by audio/* into
+// rows of <span class="sprite-glyph"> backed by the bitmap fonts shipped
+// with the Base 2.91 skin. Hooks live on the LCD scroller, time digits,
+// kbps/kHz numeric readouts, and the static titlebar wordmark. The audio
+// modules write plain text via textContent; MutationObservers detect
+// those writes (childList + characterData on subtree) and rebuild the
+// sprite glyphs in place. Observers self-disconnect around our own
+// writes to avoid a feedback loop.
+//
+// text.png FONT_LOOKUP table replicated from webamp/skinSprites.ts.
+// Glyph cell is 5x6, layout is 31 cols x N rows packed into 155x74.
+//
+// numbers.png glyph cell is 9x13 with 10 digits at x=0..81. The sheet
+// has no colon glyph (only digits + minus-sign pixels at y=6); the time
+// renderer therefore emits a text.png ':' between digits, vertically
+// centered in the 13px digit row via CSS margin.
+(function spriteText() {
+  if (!document.body) return;
+  var TEXT_FONT = {
+    a:[0,0],b:[0,1],c:[0,2],d:[0,3],e:[0,4],f:[0,5],g:[0,6],h:[0,7],
+    i:[0,8],j:[0,9],k:[0,10],l:[0,11],m:[0,12],n:[0,13],o:[0,14],p:[0,15],
+    q:[0,16],r:[0,17],s:[0,18],t:[0,19],u:[0,20],v:[0,21],w:[0,22],x:[0,23],
+    y:[0,24],z:[0,25],'"':[0,26],'@':[0,27],' ':[0,30],
+    '0':[1,0],'1':[1,1],'2':[1,2],'3':[1,3],'4':[1,4],'5':[1,5],'6':[1,6],
+    '7':[1,7],'8':[1,8],'9':[1,9],'\u2026':[1,10],'.':[1,11],':':[1,12],
+    '(':[1,13],')':[1,14],'-':[1,15],"'":[1,16],'!':[1,17],'_':[1,18],
+    '+':[1,19],'\\':[1,20],'/':[1,21],'[':[1,22],']':[1,23],'^':[1,24],
+    '&':[1,25],'%':[1,26],',':[1,27],'=':[1,28],'$':[1,29],'#':[1,30],
+    '?':[2,3],'*':[2,4],'<':[1,22],'>':[1,23],'{':[1,22],'}':[1,23],
+  };
+  var TEXT_W = 5, TEXT_H = 6;
+  var NUM_W = 9;
+
+  function makeTextGlyph(ch) {
+    var lc = ch.toLowerCase();
+    var pos = TEXT_FONT[lc] || TEXT_FONT[' '];
+    var span = document.createElement('span');
+    span.className = 'sprite-glyph sprite-text';
+    span.style.backgroundPosition = '-' + (pos[1] * TEXT_W) + 'px -' + (pos[0] * TEXT_H) + 'px';
+    return span;
+  }
+  function makeNumberGlyph(d) {
+    var span = document.createElement('span');
+    span.className = 'sprite-glyph sprite-number';
+    span.style.backgroundPosition = '-' + (d * NUM_W) + 'px 0px';
+    return span;
+  }
+  function makeTimeColon() {
+    var pos = TEXT_FONT[':'];
+    var span = document.createElement('span');
+    span.className = 'sprite-glyph sprite-text sprite-time-colon';
+    span.style.backgroundPosition = '-' + (pos[1] * TEXT_W) + 'px -' + (pos[0] * TEXT_H) + 'px';
+    return span;
+  }
+
+  function renderText(el, text) {
+    var s = String(text == null ? '' : text);
+    var glyphs = [];
+    for (var i = 0; i < s.length; i++) glyphs.push(makeTextGlyph(s[i]));
+    el.replaceChildren.apply(el, glyphs);
+  }
+  function renderTextDigits(el, text) {
+    var s = String(text == null ? '' : text).replace(/[^\d]/g, '');
+    renderText(el, s);
+  }
+  function renderTime(el, text) {
+    var m = String(text == null ? '' : text).match(/^(\d+):(\d{2})/);
+    var glyphs = [];
+    if (m) {
+      var mins = m[1], secs = m[2];
+      for (var i = 0; i < mins.length; i++) glyphs.push(makeNumberGlyph(parseInt(mins[i], 10)));
+      glyphs.push(makeTimeColon());
+      for (var j = 0; j < secs.length; j++) glyphs.push(makeNumberGlyph(parseInt(secs[j], 10)));
+    }
+    el.replaceChildren.apply(el, glyphs);
+  }
+
+  var monosterEl;
+  function setMonoster(text) {
+    if (!monosterEl) monosterEl = document.querySelector('#winamp-chrome .wa-monoster');
+    if (!monosterEl) return;
+    var t = String(text == null ? '' : text).toLowerCase();
+    monosterEl.dataset.mode = (t.indexOf('mono') !== -1 && t.indexOf('stereo') === -1) ? 'mono' : 'stereo';
+  }
+
+  function attach(el, kind) {
+    if (!el || el.__spriteAttached) return;
+    el.__spriteAttached = true;
+    var mo;
+    function paint() {
+      var raw = el.textContent;
+      if (raw === el.__lastSrc) return;
+      el.__lastSrc = raw;
+      if (mo) mo.disconnect();
+      try {
+        if (kind === 'time') renderTime(el, raw);
+        else if (kind === 'text-numeric') renderTextDigits(el, raw);
+        else if (kind === 'channels') setMonoster(raw);
+        else renderText(el, raw);
+      } finally {
+        if (mo) mo.observe(el, { childList: true, characterData: true, subtree: true });
+      }
+    }
+    mo = new MutationObserver(paint);
+    mo.observe(el, { childList: true, characterData: true, subtree: true });
+    paint();
+  }
+
+  function attachAll() {
+    var nodes = document.querySelectorAll('span[data-role="lcd"]');
+    for (var i = 0; i < nodes.length; i++) attach(nodes[i], 'text');
+    var times = document.querySelectorAll('[data-role="time"]');
+    for (var j = 0; j < times.length; j++) attach(times[j], 'time');
+    var nums = document.querySelectorAll('.wa-bitrate, .wa-srate');
+    for (var k = 0; k < nums.length; k++) attach(nums[k], 'text-numeric');
+    var ch = document.querySelectorAll('.wa-channels');
+    for (var n = 0; n < ch.length; n++) attach(ch[n], 'channels');
+    var tbar = document.querySelector('#winamp-chrome .wa-titlebar');
+    if (tbar && !tbar.querySelector('.wa-wordmark')) {
+      var wm = document.createElement('span');
+      wm.className = 'wa-wordmark';
+      wm.setAttribute('aria-hidden', 'true');
+      tbar.appendChild(wm);
+      renderText(wm, 'WINAMP');
+    }
+  }
+  attachAll();
+
+  var playerMount = document.getElementById('audio-player-mount');
+  if (playerMount) {
+    new MutationObserver(attachAll).observe(playerMount, { childList: true, subtree: true });
+  }
+
+  // Marquee — shift the LCD title-text span left ~30px/sec; wrap once the
+  // glyph row scrolls fully past the LCD slot. Uses rAF + transform so
+  // the existing CSS keyframe animation is fully replaced (overridden in
+  // theme.css for the chrome scope).
+  function startMarquee() {
+    var lcd = document.querySelector('#winamp-chrome .lcd-scroll [data-role="lcd"]');
+    if (!lcd) return;
+    var last = 0, x = 0;
+    function tick(t) {
+      requestAnimationFrame(tick);
+      if (!last) { last = t; return; }
+      var dt = t - last; last = t;
+      var content = lcd.scrollWidth;
+      var slot = lcd.parentElement ? lcd.parentElement.clientWidth : 154;
+      var wrap = content + 30;
+      if (content <= slot) { lcd.style.transform = 'translateX(0)'; return; }
+      x -= (dt / 1000) * 30;
+      if (-x > wrap) x = slot;
+      lcd.style.transform = 'translateX(' + x + 'px)';
+    }
+    requestAnimationFrame(tick);
+  }
+  startMarquee();
 })();
 
 // Relabel the 7 wired EQ faders with the canonical Winamp band frequencies

@@ -112,6 +112,7 @@
 }
 .lcd-scroll { white-space: nowrap; overflow: hidden; }
 .lcd-scroll span { display: inline-block; padding-left: 100%; animation: lcd-marquee 16s linear infinite; }
+.lcd-scroll .sprite-glyph { padding-left: 0; animation: none; }
 @keyframes lcd-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 .player-controls { display: flex; gap: var(--space-1); margin-top: var(--space-2); }
 .player-controls .btn { padding: 2px 8px; min-width: 32px; text-align: center; }
@@ -197,9 +198,48 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
 }
 #winamp-chrome .wa-titlebar > * { display: none; }
 
-/* The kbps/khz/stereo readout text is painted inside main.png as static
-   labels. Hide the live HTML so we don't double-render. */
-#winamp-chrome .wa-readout { display: none; }
+/* The kbps/khz/stereo readouts ride on top of main.png as live HTML
+   spans rendered with the text.png bitmap font (see sprite-glyph block
+   below). Each child is positioned at its canonical Winamp coords:
+   - .wa-bitrate at (111, 43) 15x6  — numeric only ("128 kbps" → "128")
+   - .wa-srate   at (156, 43) 10x6  — numeric only ("44 kHz"  → "44")
+   - .wa-channels at (212, 41) 56x12 — text node only drives monoster
+     overlay; the text itself is invisible because the .wa-monoster
+     sprite owns that screen region. */
+#winamp-chrome .wa-readout {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: transparent;
+}
+#winamp-chrome .wa-bitrate {
+  position: absolute;
+  left: 111px;
+  top: 43px;
+  width: 15px;
+  height: 6px;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+}
+#winamp-chrome .wa-srate {
+  position: absolute;
+  left: 156px;
+  top: 43px;
+  width: 10px;
+  height: 6px;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+}
+#winamp-chrome .wa-channels {
+  position: absolute;
+  left: 212px;
+  top: 41px;
+  width: 56px;
+  height: 12px;
+  visibility: hidden;
+}
 
 /* Hidden helper elements that do not render any chrome. */
 #winamp-chrome .wa-track-select,
@@ -233,8 +273,12 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
 }
 #winamp-chrome #audio-player-mount .audio-mount canvas { display: none !important; }
 
-/* Track scroller — bitmap text would come from text.png; we render the
-   live track title with VT323 at 6px so it reads in the painted well. */
+/* Track scroller — the inner [data-role=lcd] span is rebuilt by the
+   sprite-text observer in index.html into a row of 5x6 text.png glyphs.
+   The wrapping .lcd well clips at 154x6 and the inline JS animates the
+   inner span via translateX (rAF, ~30 px/sec). The base .lcd-scroll
+   keyframe animation defined earlier is overridden inside the chrome
+   scope so it can't fight the rAF marquee or scroll our glyph spans. */
 #winamp-chrome #audio-player-mount .lcd {
   position: absolute;
   left: 111px;
@@ -246,25 +290,28 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   background: transparent;
   border: 0;
   box-shadow: none;
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 7px;
-  line-height: 6px;
-  color: #00FF66;
-  text-shadow: 0 0 2px rgba(0, 255, 102, 0.5);
-  letter-spacing: 0.02em;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  letter-spacing: 0;
   overflow: hidden;
   white-space: nowrap;
 }
-#winamp-chrome #audio-player-mount .lcd-scroll span {
+#winamp-chrome .lcd-scroll [data-role="lcd"] {
   display: inline-block;
-  padding-left: 100%;
-  animation: lcd-marquee 16s linear infinite;
+  padding: 0;
+  margin: 0;
+  animation: none;
+  white-space: nowrap;
+  font-size: 0;
+  line-height: 0;
+  will-change: transform;
 }
 
-/* Time digits — main.png paints the digit well; we overlay the live time
-   in VT323 styled as the canonical green. The numbers.png sprite is
-   referenced in the docs; switching to per-digit sprite spans would
-   require touching audio/player.js which is locked. */
+/* Time digits — sprite-sliced from numbers.png (9x13 cells) by the
+   inline sprite-text observer. The colon between minutes and seconds
+   is emitted from text.png (numbers.png has no colon glyph) and
+   centered vertically in the 13px digit row via .sprite-time-colon. */
 #winamp-chrome #audio-player-mount [data-role="time"] {
   position: absolute;
   left: 36px;
@@ -273,12 +320,11 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   height: 13px;
   margin: 0;
   padding: 0;
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 14px;
-  line-height: 13px;
-  color: #00FF66;
-  text-shadow: 0 0 3px rgba(0, 255, 102, 0.5);
-  letter-spacing: 0.04em;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 #winamp-chrome #audio-player-mount [data-role="time"] + .sf-loading,
 #winamp-chrome #audio-player-mount [data-role="loading"] { display: none; }
@@ -291,6 +337,40 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   margin: 0;
   padding: 0;
   background: transparent;
+}
+
+/* Bitmap-font glyph cells emitted by the sprite-text observer.
+   .sprite-text reads text.png (155x74, 5x6 cells, FONT_LOOKUP from
+   webamp/skinSprites.ts). .sprite-number reads numbers.png (99x13,
+   9x13 cells, digits 0..9 at x=0,9,18,..,81). Both render with
+   image-rendering:pixelated so the bitmaps stay crisp. The colon
+   glyph is the text.png ':' centered in the 13-tall digit row via
+   margin (numbers.png has no colon). */
+.sprite-glyph {
+  display: inline-block;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  vertical-align: top;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+}
+.sprite-text {
+  width: 5px;
+  height: 6px;
+  background-image: url("../images/winamp-skin/base-2.91/text.png");
+  background-size: 155px 74px;
+}
+.sprite-number {
+  width: 9px;
+  height: 13px;
+  background-image: url("../images/winamp-skin/base-2.91/numbers.png");
+  background-size: 99px 13px;
+}
+.sprite-time-colon {
+  margin-top: 3px;
+  margin-bottom: 4px;
 }
 
 /* Transport row — sprite-sliced from cbuttons.png. The sheet is 136x36:
@@ -482,9 +562,19 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   background-position: 0 -422px;
 }
 
-/* EQ / PL clutter toggles — sit on top of the labels painted into main.png
-   at the canonical lower-right cluster. They stay visually invisible
-   (the sprite art handles the look) but remain clickable hit-targets. */
+/* EQ / PL clutter toggles — overlaid at the canonical lower-right
+   cluster (left=219, top=58). Sprite-sliced from shufrep.png (92x85):
+     EQ normal       (0, 61)  23x12   (sprite art "EQ" off)
+     EQ depressed    (46, 61) 23x12   (mid-press)
+     EQ selected     (0, 73)  23x12   (toggled on, lit green)
+     EQ sel+pressed  (46, 73) 23x12   (toggled on AND pressed)
+     PL normal       (23, 61) 23x12
+     PL depressed    (69, 61) 23x12
+     PL selected     (23, 73) 23x12
+     PL sel+pressed  (69, 73) 23x12
+   aria-pressed=true selects the lit row; :active selects the pressed
+   columns. Wiring lives in the existing inline IIFE that flips
+   aria-pressed on click — no audio/* edits needed. */
 #winamp-chrome .wa-clutter-bar {
   position: absolute;
   left: 219px;
@@ -503,6 +593,11 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   padding: 0;
   border: 0;
   background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/shufrep.png");
+  background-repeat: no-repeat;
+  background-size: 92px 85px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
   color: transparent;
   font-size: 0;
   line-height: 0;
@@ -514,28 +609,148 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   outline: 1px dotted #FFCC33;
   outline-offset: 0;
 }
-/* SFX toggle is not part of the original Winamp chrome — drop it on its
-   own line below the EQ panel as a small monochrome ascii button. */
-#winamp-stack .wa-stack-extras {
-  width: 275px;
-  margin: 4px 0 0 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 10px;
+#winamp-chrome #wa-eq                                    { background-position:    0px -61px; }
+#winamp-chrome #wa-eq:active                             { background-position: -46px -61px; }
+#winamp-chrome #wa-eq[aria-pressed="true"]               { background-position:    0px -73px; }
+#winamp-chrome #wa-eq[aria-pressed="true"]:active        { background-position: -46px -73px; }
+#winamp-chrome #wa-pl                                    { background-position: -23px -61px; }
+#winamp-chrome #wa-pl:active                             { background-position: -69px -61px; }
+#winamp-chrome #wa-pl[aria-pressed="true"]               { background-position: -23px -73px; }
+#winamp-chrome #wa-pl[aria-pressed="true"]:active        { background-position: -69px -73px; }
+
+/* Title-bar OAIDV clutter buttons — main.png paints the inactive
+   column at canonical (10, 22, 8, 43). Five overlay hit-targets sit on
+   top and swap to the SELECTED sprite from titlebar.png on :active.
+   Coordinates per webamp/css/main-window.css + skinSprites.ts:
+     O selected (304, 47) 8x8   top=25 left=10
+     A selected (312, 55) 8x7   top=33 left=10
+     I selected (320, 62) 8x7   top=40 left=10
+     D selected (328, 69) 8x8   top=47 left=10
+     V selected (336, 77) 8x7   top=55 left=10
+   Buttons are aria-hidden because they are decorative on this site. */
+#winamp-chrome .wa-clutter-vbar {
+  position: absolute;
+  left: 10px;
+  top: 22px;
+  width: 8px;
+  height: 43px;
+  display: block;
+  pointer-events: none;
 }
-#winamp-stack #dade-sfx-toggle {
-  display: inline-block;
-  padding: 1px 4px;
-  background: #000814;
-  color: #00FF66;
-  font-family: "VT323", "Courier New", Courier, monospace;
-  font-size: 10px;
-  border: 1px solid #1A1E28;
+#winamp-chrome .wa-clutter-vbar .wa-clutter-vbtn { pointer-events: auto; }
+#winamp-chrome .wa-clutter-vbtn {
+  position: absolute;
+  left: 0;
+  width: 8px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/titlebar.png");
+  background-repeat: no-repeat;
+  background-size: 344px 87px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
   cursor: pointer;
+  opacity: 0;
 }
+#winamp-chrome .wa-clutter-vbtn:active { opacity: 1; }
+#winamp-chrome .wa-clutter-vbtn[data-clutter="o"] { top:  3px; height: 8px; background-position: -304px -47px; }
+#winamp-chrome .wa-clutter-vbtn[data-clutter="a"] { top: 11px; height: 7px; background-position: -312px -55px; }
+#winamp-chrome .wa-clutter-vbtn[data-clutter="i"] { top: 18px; height: 7px; background-position: -320px -62px; }
+#winamp-chrome .wa-clutter-vbtn[data-clutter="d"] { top: 25px; height: 8px; background-position: -328px -69px; }
+#winamp-chrome .wa-clutter-vbtn[data-clutter="v"] { top: 33px; height: 7px; background-position: -336px -77px; }
+
+/* Title-bar wordmark — main.png paints "WINAMP" baked into the gradient
+   titlebar art, but we re-render it from text.png so the live HTML
+   produces a crisp, sprite-true wordmark instead of a smeared bitmap
+   bake. The sprite-text observer fills .wa-wordmark with 6 text.png
+   glyphs; the wrapper sits centered horizontally and vertically inside
+   the 14px-tall titlebar (6px glyphs → top:4px). */
+#winamp-chrome .wa-titlebar > .wa-wordmark {
+  display: block;
+  position: absolute;
+  left: 100px;
+  top: 4px;
+  width: 75px;
+  height: 6px;
+  text-align: center;
+  font-size: 0;
+  line-height: 0;
+}
+
+/* Mono / stereo indicator — overlaid at canonical (212, 41) inside
+   the chrome. Sprite-sliced from monoster.png (58x24):
+     STEREO selected (0,  0) 29x12   (top-left, lit)
+     MONO   selected (29, 0) 27x12   (top-right, lit)
+     STEREO inactive (0, 12) 29x12   (bottom-left, dim)
+     MONO   inactive (29,12) 27x12   (bottom-right, dim)
+   The .wa-monoster span shows BOTH segments (mono left, stereo right).
+   data-mode toggles which segment is "selected" (lit) vs inactive.
+   Default rendering is a span using two ::before/::after layers from
+   the same sprite — left half = stereo region (29 wide), right half
+   = mono region (27 wide), totalling 56 wide. */
+#winamp-chrome .wa-monoster {
+  position: absolute;
+  left: 212px;
+  top: 41px;
+  width: 56px;
+  height: 12px;
+  display: block;
+  pointer-events: none;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/monoster.png");
+  background-repeat: no-repeat;
+  background-size: 58px 24px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-chrome .wa-monoster::after {
+  content: '';
+  position: absolute;
+  left: 29px;
+  top: 0;
+  width: 27px;
+  height: 12px;
+  background-image: url("../images/winamp-skin/base-2.91/monoster.png");
+  background-repeat: no-repeat;
+  background-size: 58px 24px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+/* stereo mode: left "stereo" lit, right "mono" inactive */
+#winamp-chrome .wa-monoster[data-mode="stereo"]        { background-position:   0px   0px; }
+#winamp-chrome .wa-monoster[data-mode="stereo"]::after { background-position: -29px -12px; }
+/* mono mode: left "stereo" inactive, right "mono" lit */
+#winamp-chrome .wa-monoster[data-mode="mono"]          { background-position:   0px -12px; }
+#winamp-chrome .wa-monoster[data-mode="mono"]::after   { background-position: -29px   0px; }
+
+/* Position-bar cover — main.png paints a default position-bar art at
+   (16, 72, 248, 10) that includes a thumb sprite mid-track, leaving an
+   orange band visible because the audio module exposes no seek input.
+   We overlay posbar.png cropped to its empty-track region (0, 0, 248,
+   10) at the canonical x=16, y=72 inside #winamp-chrome — that's the
+   "no thumb" empty-track sprite that was always shown when Winamp had
+   no media loaded. The 29x10 thumb sprite at posbar.png x=248 stays
+   off-screen so no thumb is rendered. */
+#winamp-chrome .wa-posbar {
+  position: absolute;
+  left: 16px;
+  top: 72px;
+  width: 248px;
+  height: 10px;
+  display: block;
+  pointer-events: none;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/posbar.png");
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 307px 10px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+/* SFX toggle moved to the right-sidebar #fx-toggles-mount widget so it
+   sits next to CRT + STARS as a third .btn sibling. The element keeps
+   its byte-identical id+class so the inline wiring (and audio/sfx.js
+   localStorage key) remain untouched. No extra widget styling needed —
+   the shared .btn class above paints it the same as its siblings. */
 
 /* ----------------------------------------------------------------------
    Equalizer window — sprite-sliced from eqmain.png. The full sheet is

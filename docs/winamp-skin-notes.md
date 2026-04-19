@@ -163,9 +163,211 @@ of the kbps / kHz / scroller text.
 
 ## Future work (not in this run)
 
-- Render kbps / kHz / scroller text from `text.png` instead of VT323.
-- Render time digits from `numbers.png` (would need `audio/player.js`
-  changes to emit per-digit spans, currently locked).
-- Wire the position bar + `posbar.png` to a seek input.
-- Skin the mono / stereo indicators from `monoster.png`.
+- Wire the position bar + `posbar.png` to a real seek input (we now
+  paint the empty-track region; a thumb sprite at posbar.png x = 248
+  would represent live playhead position).
 - Skin the shuffle / repeat toggles from `shufrep.png`.
+
+## Bitmap font charmap + glyph offsets
+
+The audio module writes plain text into the LCD, time, and readout
+nodes. We must not edit `audio/*` (lock enforced by
+`git diff HEAD~1 -- audio/ | wc -l == 0`), so the inline `spriteText`
+IIFE in `index.html` attaches `MutationObserver`s to those nodes and
+rebuilds their children as rows of `<span class="sprite-glyph">` backed
+by the bitmap fonts. Observers self-disconnect around their own writes
+to avoid feedback loops.
+
+### `numbers.png` digit table (99 × 13)
+
+10 digits laid horizontally, each glyph 9 × 13. CSS background offset
+per digit is `-d*9px 0`.
+
+| Digit | x   | y | w | h  | `background-position` |
+| ----- | --- | - | - | -- | --------------------- |
+| 0     | 0   | 0 | 9 | 13 | `0 0`                 |
+| 1     | 9   | 0 | 9 | 13 | `-9px 0`              |
+| 2     | 18  | 0 | 9 | 13 | `-18px 0`             |
+| 3     | 27  | 0 | 9 | 13 | `-27px 0`             |
+| 4     | 36  | 0 | 9 | 13 | `-36px 0`             |
+| 5     | 45  | 0 | 9 | 13 | `-45px 0`             |
+| 6     | 54  | 0 | 9 | 13 | `-54px 0`             |
+| 7     | 63  | 0 | 9 | 13 | `-63px 0`             |
+| 8     | 72  | 0 | 9 | 13 | `-72px 0`             |
+| 9     | 81  | 0 | 9 | 13 | `-81px 0`             |
+
+Extras inside `numbers.png`:
+
+- `MINUS_SIGN` — 5 × 1 strip at (20, 6). Used by Webamp for negative
+  countdown; we do not render it.
+- `NO_MINUS_SIGN` — 5 × 1 blank at (9, 6).
+
+There is **no colon glyph** in `numbers.png`. The time renderer in
+`index.html` therefore emits a `:` glyph from `text.png` between the
+minute and second digits, vertically centered in the 13 px digit row
+via `.sprite-time-colon { margin-top: 3px; margin-bottom: 4px; }`.
+
+### `text.png` 93-char ASCII charmap (155 × 74)
+
+5 × 6 cells. Layout is 31 chars per row × N rows, replicated verbatim
+from `webamp/packages/webamp/js/skinSprites.ts` (`FONT_LOOKUP`). Maps
+each character to `[row, col]`; CSS background offset per glyph is
+`-(col*5)px -(row*6)px`. The font is uppercase-only — lowercase keys
+share their uppercase art (Webamp's lookup deburrs accents and
+lowercases the input).
+
+Row 0 (y = 0):
+
+| col | char | col | char | col | char | col | char |
+| --- | ---- | --- | ---- | --- | ---- | --- | ---- |
+| 0   | A    | 8   | I    | 16  | Q    | 24  | Y    |
+| 1   | B    | 9   | J    | 17  | R    | 25  | Z    |
+| 2   | C    | 10  | K    | 18  | S    | 26  | "    |
+| 3   | D    | 11  | L    | 19  | T    | 27  | @    |
+| 4   | E    | 12  | M    | 20  | U    | 28  | (unused) |
+| 5   | F    | 13  | N    | 21  | V    | 29  | (unused) |
+| 6   | G    | 14  | O    | 22  | W    | 30  | (space) |
+| 7   | H    | 15  | P    | 23  | X    |     |      |
+
+Row 1 (y = 6):
+
+| col | char | col | char | col | char | col | char |
+| --- | ---- | --- | ---- | --- | ---- | --- | ---- |
+| 0   | 0    | 8   | 8    | 16  | '    | 24  | ^    |
+| 1   | 1    | 9   | 9    | 17  | !    | 25  | &    |
+| 2   | 2    | 10  | …    | 18  | _    | 26  | %    |
+| 3   | 3    | 11  | .    | 19  | +    | 27  | ,    |
+| 4   | 4    | 12  | :    | 20  | \    | 28  | =    |
+| 5   | 5    | 13  | (    | 21  | /    | 29  | $    |
+| 6   | 6    | 14  | )    | 22  | [    | 30  | #    |
+| 7   | 7    | 15  | -    | 23  | ]    |     |      |
+
+Row 2 (y = 12) — ISO-Latin extras + symbols:
+
+| col | char | col | char |
+| --- | ---- | --- | ---- |
+| 0   | Å    | 3   | ?    |
+| 1   | Ö    | 4   | *    |
+| 2   | Ä    |     |      |
+
+Aliases (re-using existing glyphs):
+
+- `<`, `{` → row 1 col 22 (the `[` glyph)
+- `>`, `}` → row 1 col 23 (the `]` glyph)
+
+Cell dims: `5 × 6`. Sheet dims: `155 × 74` (declared `background-size`).
+
+### Track-scroller marquee
+
+The audio module writes the track title via `textContent` on
+`span[data-role=lcd]`. The observer rebuilds the span as a row of
+text.png glyphs. A separate `requestAnimationFrame` loop in the same
+IIFE shifts the span's `transform: translateX(...)` left at ~30 px / s
+and wraps once the glyph row scrolls fully past the 154 px LCD slot.
+The base `.lcd-scroll span` keyframe animation is overridden inside
+the chrome scope (and zeroed out for `.sprite-glyph` descendants
+globally) so it cannot fight the rAF marquee or scroll our glyph
+spans.
+
+### Title-bar wordmark
+
+`text.png` glyphs render `WINAMP` (6 chars × 5 px = 30 px wide) into
+`#winamp-chrome .wa-titlebar > .wa-wordmark`, positioned at left = 100
+top = 4 inside the 14 px-tall titlebar so it sits centered over the
+spot where the original `main.png` art had the same wordmark baked in.
+There is no dedicated lightning-bolt sprite in `titlebar.png` (only the
+"Easter egg" titlebar variants at y = 57/72 contain bolt art baked into
+the gradient), so the bolt remains painted by `main.png`; no separate
+glyph element is required.
+
+## Clutter button states
+
+### Title-bar OAIDV cluster (overlay on `main.png`, sprites from `titlebar.png`)
+
+`main.png` paints the inactive O / A / I / D / V column at canonical
+(10, 22, 8, 43). Five 1 × 1 hit-target spans inside
+`#winamp-chrome .wa-clutter-vbar` overlay it and swap to the SELECTED
+sprite from `titlebar.png` on `:active`. Coordinates per
+`webamp/css/main-window.css` + `skinSprites.ts`:
+
+| Button | overlay top | overlay h | sprite x | sprite y | sprite w × h |
+| ------ | ----------- | --------- | -------- | -------- | ------------ |
+| O      | 3           | 8         | 304      | 47       | 8 × 8        |
+| A      | 11          | 7         | 312      | 55       | 8 × 7        |
+| I      | 18          | 7         | 320      | 62       | 8 × 7        |
+| D      | 25          | 8         | 328      | 69       | 8 × 8        |
+| V      | 33          | 7         | 336      | 77       | 8 × 7        |
+
+Sheet dims: `344 × 87`.
+
+### Lower-right EQ / PL cluster (sprites from `shufrep.png`)
+
+Sheet dims: `92 × 85`. Each button is 23 × 12 with four states (normal,
+depressed, selected, selected + depressed). `aria-pressed="true"`
+selects the lit (bottom) row; `:active` selects the pressed (right)
+column.
+
+| Button | normal      | depressed     | selected     | sel + depressed |
+| ------ | ----------- | ------------- | ------------ | --------------- |
+| EQ     | `(0, 61)`   | `(46, 61)`    | `(0, 73)`    | `(46, 73)`      |
+| PL     | `(23, 61)`  | `(69, 61)`    | `(23, 73)`   | `(69, 73)`      |
+
+Wiring lives in the existing inline IIFE in `index.html` that flips
+`aria-pressed` on click — no `audio/*` edits needed.
+
+## monoster overlay coords
+
+`monoster.png` is 58 × 24 with two indicator pairs side by side:
+
+| Sprite             | x  | y  | w  | h  |
+| ------------------ | -- | -- | -- | -- |
+| `STEREO_SELECTED`  | 0  | 0  | 29 | 12 |
+| `MONO_SELECTED`    | 29 | 0  | 27 | 12 |
+| `STEREO`           | 0  | 12 | 29 | 12 |
+| `MONO`             | 29 | 12 | 27 | 12 |
+
+Overlay element `.wa-monoster` lives at canonical (212, 41, 56, 12)
+inside `#winamp-chrome`. The base background paints the left "stereo"
+half; `::after` paints the right "mono" half. `data-mode` toggles which
+half is lit:
+
+- `data-mode="stereo"` — left = `(0, 0)` (lit stereo), right = `(29, 12)` (dim mono)
+- `data-mode="mono"`   — left = `(0, 12)` (dim stereo), right = `(29, 0)` (lit mono)
+
+The sprite-text observer reads `.wa-channels`'s text node (audio module
+writes "stereo" or "mono") and writes `monosterEl.dataset.mode`
+accordingly. The `.wa-channels` text element itself is
+`visibility: hidden` so only the sprite indicator renders.
+
+## posbar empty-state crop
+
+`posbar.png` is 307 × 10 — a 248 × 10 empty-track strip on the left
+followed by two 29 × 10 thumb sprites (normal + selected) on the right.
+`main.png` paints a default position-bar art at (16, 72, 248, 10) that
+includes a thumb mid-track, leaving an orange band visible because the
+audio module exposes no seek input. We overlay `.wa-posbar` cropped to
+the empty-track region:
+
+| Region              | x  | y | w   | h  | bg-position |
+| ------------------- | -- | - | --- | -- | ----------- |
+| Empty-track sprite  | 0  | 0 | 248 | 10 | `0 0`       |
+| Overlay placement   | 16 | 72 | 248 | 10 | (inside `#winamp-chrome`) |
+
+`background-size: 307px 10px` keeps the thumb sprite at x = 248 fully
+off-screen so no thumb is rendered.
+
+## DOM changes
+
+- Removed `.wa-stack-extras` and its sole child `#dade-sfx-toggle`
+  from inside `#winamp-stack` (was sitting below `#winamp-eq`).
+- Re-inserted the same `<span id="dade-sfx-toggle" class="btn"
+  role="button" tabindex="0">` byte-identically inside the right
+  sidebar's `#fx-toggles-mount` widget as a third sibling button after
+  `#toggle-crt` and `#toggle-stars`. The inline wiring (and
+  `audio/sfx.js`'s shared `localStorage.sfx_enabled` key) keeps working
+  unchanged because the id, class, and behaviour are preserved.
+- Added decorative chrome inside `#winamp-chrome`: `.wa-clutter-vbar`
+  (5 OAIDV hit-targets), `.wa-posbar` (empty position-bar cover), and
+  `.wa-monoster` (mono / stereo sprite overlay).
+- Added `.wa-wordmark` child to `.wa-titlebar`, populated with text.png
+  glyphs by the sprite-text observer.
