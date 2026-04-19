@@ -751,3 +751,100 @@ fidelity at 1× zoom.
   created** for the playlist scope, so the existing observer guards
   (`attachAll` idempotency, EQ-fader guard, LCD glyph guard) remain
   byte-identical.
+
+## Visualizer well — `#wa-viz` canvas
+
+- **Canonical coords**: 76 x 16 pixel well at **(24, 43)** inside the
+  275 x 116 main window (`main.png` background origin). Sits between the
+  play/pause/stop sprite stack on the left and the LCD readout / time
+  digits on the right. These are the same coordinates Webamp uses
+  (see `captbaritone/webamp` `js/components/Vis/`) and match every
+  classic .wsz skin since Winamp 2.
+- The canvas is added once inside `#winamp-chrome` as
+  `<canvas id="wa-viz" width="76" height="16">` with the backing store
+  sized 1:1 to the on-screen box. CSS sets `image-rendering: pixelated`
+  defensively so non-integer DPR or browser zoom never bilinear-smooths
+  the output. **No CSS gradients** anywhere in the chrome scope — every
+  colour is a flat `fillRect` from the viscolor palette.
+- Click the canvas to cycle modes: `0` off, `1` spectrum, `2`
+  oscilloscope. Mode persists across reloads in
+  `localStorage.wa_viz_mode` (default `'1'`).
+- The render loop is a single `requestAnimationFrame` and is paused
+  while `document.hidden` is true (visibilitychange listener) so the
+  canvas costs zero CPU in background tabs. Init is double-install
+  guarded via `canvas.__vizAttached`.
+
+### Audio source — read-only consumer
+
+The viz consumes `globalThis.__dadeAudioAnalyser`, the `AnalyserNode`
+exposed by `audio/player.js` `ensureCtx()` on first play. The audio
+graph (`masterGain -> analyser -> destination`, `fftSize: 256`) is
+**not touched** by this layer — the viz only calls
+`getByteFrequencyData` / `getByteTimeDomainData` on the existing node.
+Diffs under `audio/` for this step are byte-identical (`git diff
+HEAD~1 -- audio/ | wc -l == 0`).
+
+### Spectrum mode (1)
+
+- 19 bars at `BAR_W = 3px`, `BAR_GAP = 1px`, stride 4px. Total span
+  `19*4 - 1 = 75px`, leaving a 1px right margin inside the 76px
+  canvas (matches native Winamp 2 spacing — the canonical layout is
+  3-wide bars with 1-wide gaps; the prompt's "4px wide + 1px gaps" is
+  read as the 4px stride per bar).
+- Frequency bins are grouped into the 19 bars using a logarithmic
+  bin map built once from `analyser.frequencyBinCount` (128 with
+  `fftSize: 256`). Bar 0 covers the lowest non-DC bin; bar 18 covers
+  the top of the spectrum. Per-bar height is `round((avg/255) * 16)`.
+- Each bar pixel row `y` (0 = top) is filled with `viscolor[2 + y]`,
+  so the top row is bright red and the bottom row is dark green —
+  matches native Winamp.
+- Per-bar peak caps are tracked across frames; cap colour is
+  `viscolor[23]` (gray) and falls 1 pixel per frame.
+
+### Oscilloscope mode (2)
+
+- Reads `getByteTimeDomainData` into a buffer sized to `analyser.fftSize`
+  and sub-samples to 76 columns (one per pixel column). Sample value
+  `v` (0..255, silence ≈ 128) maps to row `y = round((255-v)/255 *
+  15)`. Adjacent columns are connected with a vertical `fillRect`
+  span so the polyline reads continuously even when the waveform
+  jumps more than 1px between samples.
+- Colour band is keyed off the row excursion from centre:
+  `band = min(4, floor(|y - 7| / 2))`, painted with
+  `viscolor[18 + band]`. Centre rows render in `viscolor[18]` (white);
+  peak excursions render in `viscolor[22]` (dim).
+
+### Viscolor palette — `viscolor.txt` format + slots
+
+- `viscolor.txt` is a plain-text file inside a Winamp `.wsz` pack with
+  exactly **24 lines**, each line `"r,g,b"` (decimal 0..255, no
+  quoting, no header). Some skins include trailing whitespace or
+  comments after the 24 lines — readers must ignore everything after
+  line 24.
+- The Base 2.91 .wsz pack we slice sprites from (`images/winamp-skin/
+  base-2.91/`) **does not ship a `viscolor.txt`**. The viz palette is
+  therefore the canonical Webamp default 24-colour table baked inline
+  into the `attachWaViz` IIFE. Slot meaning (matches Webamp source):
+  - `0`     background (solid fill behind bars / between scan lines)
+  - `1`     background dot / gridline (currently unused — kept for
+    slot fidelity if a future skin paints scan lines)
+  - `2..17` spectrum bar pixel-row colours, top → bottom
+    (red → green); 16 entries map 1:1 to the 16 row slots
+  - `18..22` oscilloscope amplitude bands (centre → peak excursion)
+  - `23`    spectrum peak-cap colour
+- If a future skin pack ships `viscolor.txt`, the parser path is:
+  fetch the file, split on `\n`, take the first 24 non-empty lines,
+  and for each line `match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)` →
+  `[r, g, b]`. The current implementation has the slot indices and
+  fill points already wired so dropping in a parsed palette is a
+  single `PALETTE = parsed` swap.
+
+### Reused vs. new viz slot
+
+- The pre-existing `<canvas id="viz" class="wa-viz" width="280"
+  height="48" hidden>` is a relic from an earlier audio-module–owned
+  viz that was never sized to the sprite well. It stays hidden via
+  the `#winamp-chrome .wa-viz { display: none !important; }` rule.
+  This step adds a **new** `<canvas id="wa-viz">` (different id, no
+  `.wa-viz` class) so the hidden rule does not apply, and positions
+  it at the canonical sprite coords.

@@ -128,6 +128,7 @@ img {
             <span class="wa-monoster" aria-hidden="true" data-mode="stereo"></span>
             <select id="track-select" class="wa-track-select" hidden aria-hidden="true"></select>
             <canvas id="viz" class="wa-viz" width="280" height="48" hidden aria-hidden="true"></canvas>
+            <canvas id="wa-viz" width="76" height="16" aria-label="visualizer" title="click to cycle viz mode"></canvas>
             <div id="audio-player-mount"></div>
             <button type="button" class="wa-eject" aria-label="eject"></button>
             <span class="wa-tooltip" data-for="vol" hidden></span>
@@ -1185,6 +1186,217 @@ window.__dadeOnTrackEnd = function (curIdx, defaultNext, total) {
 initSFX();
 initEasterEggs();
 initKonami({ onUnlock: function () {} });
+</script>
+<script>
+// Sprite-fidelity spectrum / oscilloscope viz painted into #wa-viz at the
+// canonical Winamp 2 viz well coords (24,43) inside the 275x116 main
+// window. Reads globalThis.__dadeAudioAnalyser (exposed once by the
+// audio module's ensureCtx() on first play) and never edits audio/* —
+// the analyser node, fftSize, and post-mix tap point are all owned by
+// audio/player.js. We only consume the analyser's byte buffers.
+//
+// Modes are cycled by clicking the canvas:
+//   0 = off          (solid viscolor[0] fill)
+//   1 = spectrum     (19 bars, peak caps)
+//   2 = oscilloscope (76-sample column scope)
+// Mode is persisted in localStorage as 'wa_viz_mode' ('0'|'1'|'2'),
+// default '1'. The render loop is paused while document.hidden is true
+// (visibilitychange listener) so the canvas does not eat a CPU slice in
+// background tabs. Init is double-install guarded via canvas.__vizAttached.
+//
+// Palette is the canonical Webamp default 24-colour viscolor table —
+// matches viscolor.txt format (24 lines of "r,g,b") that ships in most
+// .wsz skins. The Base 2.91 .wsz pack we sprite-slice from does not
+// include a viscolor.txt, so the hard-coded fallback below is what
+// paints. See docs/winamp-skin-notes.md for the format + slot meaning.
+(function attachWaViz() {
+  var canvas = document.getElementById('wa-viz');
+  if (!canvas || canvas.__vizAttached) return;
+  canvas.__vizAttached = true;
+
+  var ctx2d = canvas.getContext('2d');
+  if (!ctx2d) return;
+  ctx2d.imageSmoothingEnabled = false;
+
+  // Webamp default viscolor palette (24 entries).
+  // 0     background
+  // 1     background dot / gridline (unused here, kept for slot fidelity)
+  // 2..17 spectrum bar colours, top-to-bottom (red -> green)
+  // 18..22 oscilloscope amplitude bands (white -> dim)
+  // 23    spectrum peak-cap colour
+  var PALETTE = [
+    [0,0,0],[24,33,41],[239,49,16],[206,41,16],[214,90,0],[214,102,0],
+    [214,115,0],[198,123,8],[222,165,24],[214,181,38],[189,222,41],[148,222,33],
+    [41,206,16],[50,190,16],[57,181,16],[49,156,8],[41,148,0],[24,132,8],
+    [255,255,255],[214,214,222],[181,189,189],[160,170,175],[148,156,165],[150,150,150]
+  ];
+  var COLORS = PALETTE.map(function (c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; });
+
+  var W = 76, H = 16;
+  var BARS = 19;
+  var BAR_W = 3;     // 3px wide bars + 1px gap = 4px stride; 19*4 - 1 = 75 (leaves 1px right margin), matches native Winamp viz
+  var BAR_GAP = 1;
+  var STRIDE = BAR_W + BAR_GAP;
+
+  var LS_KEY = 'wa_viz_mode';
+  function readMode() {
+    try {
+      var v = localStorage.getItem(LS_KEY);
+      if (v === '0' || v === '1' || v === '2') return Number(v);
+    } catch (e) {}
+    return 1;
+  }
+  function writeMode(m) {
+    try { localStorage.setItem(LS_KEY, String(m)); } catch (e) {}
+  }
+  var mode = readMode();
+
+  canvas.addEventListener('click', function () {
+    mode = (mode + 1) % 3;
+    writeMode(mode);
+  });
+
+  var peaks = new Array(BARS);
+  for (var i = 0; i < BARS; i++) peaks[i] = 0;
+
+  var freqBuf = null, timeBuf = null;
+  // Logarithmic bin map: precomputed once analyser binCount is known.
+  // Each bar gets [lo, hi) bin indices; bar 0 covers the lowest-frequency
+  // bins, bar BARS-1 the highest. log spacing matches Winamp's perceptual
+  // grouping (low end gets fewer bins, high end gets many).
+  var binMap = null;
+  function buildBinMap(binCount) {
+    binMap = new Array(BARS);
+    var minBin = 1; // skip DC
+    var maxBin = binCount;
+    var logMin = Math.log(minBin);
+    var logMax = Math.log(maxBin);
+    var prev = minBin;
+    for (var b = 0; b < BARS; b++) {
+      var t = (b + 1) / BARS;
+      var hi = Math.min(maxBin, Math.max(prev + 1, Math.round(Math.exp(logMin + (logMax - logMin) * t))));
+      binMap[b] = [prev, hi];
+      prev = hi;
+    }
+  }
+
+  function fillBg() {
+    ctx2d.fillStyle = COLORS[0];
+    ctx2d.fillRect(0, 0, W, H);
+  }
+
+  function drawSpectrum(an) {
+    var binCount = an.frequencyBinCount;
+    if (!freqBuf || freqBuf.length !== binCount) freqBuf = new Uint8Array(binCount);
+    if (!binMap || binMap.length !== BARS) buildBinMap(binCount);
+    an.getByteFrequencyData(freqBuf);
+
+    fillBg();
+
+    for (var b = 0; b < BARS; b++) {
+      var lo = binMap[b][0], hi = binMap[b][1];
+      var sum = 0, n = 0;
+      for (var i = lo; i < hi; i++) { sum += freqBuf[i]; n++; }
+      var avg = n > 0 ? sum / n : 0;
+      // Light log compression so quiet content still moves the bars.
+      var norm = avg / 255;
+      var height = Math.round(norm * H);
+      if (height < 0) height = 0; else if (height > H) height = H;
+
+      var x = b * STRIDE;
+      // Each row y in 0..H-1 from top is coloured PALETTE[2 + y]:
+      // y=0 (top) is red (PALETTE[2]); y=H-1 (bottom) is dark green
+      // (PALETTE[2 + 15] = PALETTE[17]). Native Winamp behaviour.
+      for (var row = 0; row < height; row++) {
+        var yPix = H - 1 - row; // fill from bottom up
+        ctx2d.fillStyle = COLORS[2 + (H - 1 - yPix)];
+        ctx2d.fillRect(x, yPix, BAR_W, 1);
+      }
+
+      // Peak cap: track per-bar peak, fall 1px/frame.
+      if (height > peaks[b]) peaks[b] = height;
+      else if (peaks[b] > 0) peaks[b] -= 1;
+      if (peaks[b] > 0 && peaks[b] <= H) {
+        var capY = H - peaks[b];
+        ctx2d.fillStyle = COLORS[23];
+        ctx2d.fillRect(x, capY, BAR_W, 1);
+      }
+    }
+  }
+
+  function drawOsc(an) {
+    if (!timeBuf || timeBuf.length !== W) {
+      // Use exactly W samples by reading into a buffer sized to fftSize and
+      // sub-sampling. Simpler: read into a buffer of the analyser's fftSize
+      // and stride down to W columns.
+    }
+    var tlen = an.fftSize;
+    if (!timeBuf || timeBuf.length !== tlen) timeBuf = new Uint8Array(tlen);
+    an.getByteTimeDomainData(timeBuf);
+
+    fillBg();
+
+    var step = tlen / W;
+    var prevY = -1;
+    for (var x = 0; x < W; x++) {
+      var idx = Math.floor(x * step);
+      var v = timeBuf[idx]; // 0..255, silence ~= 128
+      // Map sample to row 0..H-1 (top..bottom). Centre row = H/2 - 1.
+      var y = Math.round((255 - v) / 255 * (H - 1));
+      if (y < 0) y = 0; else if (y > H - 1) y = H - 1;
+
+      // Amplitude band: 0 (centre, brightest) -> 4 (peak excursion).
+      var excursion = Math.abs(y - (H / 2 - 1));
+      var band = Math.floor(excursion / 2);
+      if (band > 4) band = 4;
+      ctx2d.fillStyle = COLORS[18 + band];
+
+      // Connect to previous column so the polyline reads continuously
+      // even when the waveform changes >1px between adjacent samples.
+      if (prevY < 0) prevY = y;
+      var y0 = Math.min(prevY, y);
+      var y1 = Math.max(prevY, y);
+      ctx2d.fillRect(x, y0, 1, (y1 - y0) + 1);
+      prevY = y;
+    }
+  }
+
+  // Draw a single static frame so the well isn't transparent before the
+  // analyser exists (e.g. before the user clicks play and ensureCtx runs).
+  fillBg();
+
+  var rafId = 0;
+  var paused = false;
+
+  function frame() {
+    rafId = 0;
+    if (paused) return;
+    var an = globalThis.__dadeAudioAnalyser;
+    if (mode === 0 || !an) {
+      fillBg();
+    } else if (mode === 1) {
+      drawSpectrum(an);
+    } else if (mode === 2) {
+      drawOsc(an);
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function start() {
+    paused = false;
+    if (!rafId) rafId = requestAnimationFrame(frame);
+  }
+  function stop() {
+    paused = true;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stop(); else start();
+  });
+
+  start();
+})();
 </script>
 </body>
 </html>

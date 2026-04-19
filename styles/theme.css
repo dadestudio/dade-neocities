@@ -256,6 +256,33 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
 #winamp-chrome .wa-track-select,
 #winamp-chrome .wa-viz { display: none !important; }
 
+/* Sprite-fidelity spectrum analyser / oscilloscope canvas. Lives at the
+   canonical Winamp 2 viz coords inside the 275x116 main window: a 76x16
+   pixel well at (24, 43), immediately right of the play/pause/stop sprite
+   stack and left of the LCD. The canvas backing store is 1:1 with the
+   on-screen pixels (76x16 attributes match the CSS box) so no scaling
+   ever happens; image-rendering: pixelated is defensive in case a
+   non-integer DPR or zoom forces the browser to resample. Painting is
+   driven by the inline `attachWaViz` IIFE in index.html which polls
+   globalThis.__dadeAudioAnalyser and never edits audio/. No CSS
+   gradients — every colour is a flat fill from the viscolor palette
+   baked into the JS, matching the .wsz palette format. */
+#winamp-chrome #wa-viz {
+  position: absolute;
+  left: 24px;
+  top: 43px;
+  width: 76px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  cursor: pointer;
+  z-index: 5;
+}
+
 /* Audio player mount becomes a coordinate space spanning the full chrome.
    Every interactive child is absolutely positioned at canonical Winamp
    pixel coordinates so the live controls land exactly on top of the
