@@ -118,7 +118,7 @@
 input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: var(--accent-neon); }
 .sf-loading { color: var(--ink-dim); font-size: var(--fs-xs); margin-top: var(--space-1); }
 
-/* T12 — Winamp 2 chrome skin (scoped to #winamp-chrome to prevent bleed) */
+/* Winamp authentic skin: chrome scoped to #winamp-chrome to prevent bleed */
 #winamp-chrome {
   --wa-base: #3a4a6a;
   --wa-hi: #6a7a9a;
@@ -317,7 +317,7 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   box-shadow: 0 0 4px var(--accent-neon);
 }
 
-/* ===== T12.5 Winamp SS1 skin fidelity pass ===== */
+/* ===== Winamp authentic skin fidelity pass ===== */
 /* Palette lock */
 #winamp-chrome.wa-skin-ss1 {
   --wa-chrome-top: #D8DCE4;
@@ -332,27 +332,45 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   --wa-font-pixel: "VT323", "Courier New", Courier, monospace;
 }
 
-/* Outer frame: raised bevel + gradient chrome */
+/* Winamp authentic skin: rules below target the real DOM rendered by player.js + eq-mixer.js
+   (LCD lives in #audio-player-mount .lcd, transport in .player-controls .btn,
+   volume in input[type="range"].vol, faders in #winamp-eq .eq-fader input).
+   Old selectors .wa-readouts / .wa-transport / .wa-lcd / .wa-fader / .wa-eq-panel
+   matched nothing in the live DOM and have been removed. */
+
+/* Outer frame: raised bevel + chrome gradient + 1px dither sprite, locked chrome width */
 #winamp-chrome.wa-skin-ss1 {
-  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 50%, var(--wa-chrome-bot) 100%);
+  width: 275px;
+  max-width: 100%;
+  background:
+    url(../images/winamp/bevel-sprite.svg) repeat-x top left,
+    linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 50%, var(--wa-chrome-bot) 100%);
   border-top: 1px solid var(--wa-bevel-light);
   border-left: 1px solid var(--wa-bevel-light);
   border-right: 1px solid var(--wa-bevel-dark);
   border-bottom: 1px solid var(--wa-bevel-dark);
-  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.3), inset -1px -1px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.5);
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.3),
+    inset -1px -1px 0 rgba(0,0,0,0.4),
+    0 2px 4px rgba(0,0,0,0.5);
+  padding: 2px;
+  font-family: var(--wa-font-pixel);
+  color: var(--wa-text);
   image-rendering: pixelated;
 }
 
-/* Title bar with lightning bolt */
+/* Title bar: deep blue gradient + sprite lightning bolt; hide the text bolt */
 #winamp-chrome.wa-skin-ss1 .wa-titlebar {
-  background: linear-gradient(180deg, #5A7AAA 0%, #3A5A8A 100%);
+  height: 14px;
+  background:
+    url(../images/winamp/bevel-sprite.svg) repeat-x top left,
+    linear-gradient(180deg, #5A7AAA 0%, #3A5A8A 100%);
   border-bottom: 1px solid var(--wa-bevel-dark);
-  padding: 2px 4px;
+  padding: 1px 4px;
   font-family: var(--wa-font-pixel);
-  font-size: 10px;
+  font-size: 11px;
   color: #FFFFFF;
   text-shadow: 1px 1px 0 #000;
-  position: relative;
 }
 #winamp-chrome.wa-skin-ss1 .wa-titlebar::before {
   content: "";
@@ -363,10 +381,66 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   margin-right: 4px;
   vertical-align: middle;
 }
+#winamp-chrome.wa-skin-ss1 .wa-bolt { display: none; }
+#winamp-chrome.wa-skin-ss1 .wa-glyph {
+  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 100%);
+  border-top: 1px solid var(--wa-bevel-light);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  color: #000;
+  font-size: 9px;
+}
+#winamp-chrome.wa-skin-ss1 .wa-title {
+  font-family: var(--wa-font-pixel);
+  font-size: 11px;
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0 #000;
+}
 
-/* LCD well: recessed, dark navy, green pixel text */
-#winamp-chrome.wa-skin-ss1 .wa-lcd,
-#winamp-chrome.wa-skin-ss1 #viz {
+/* Bitrate / kHz / stereo readout: recessed LCD well, tight pixel font */
+#winamp-chrome.wa-skin-ss1 .wa-readout {
+  height: auto;
+  margin-top: 2px;
+  padding: 1px 4px;
+  background: var(--wa-lcd-bg);
+  border-top: 1px solid var(--wa-bevel-dark);
+  border-left: 1px solid var(--wa-bevel-dark);
+  border-right: 1px solid var(--wa-bevel-light);
+  border-bottom: 1px solid var(--wa-bevel-light);
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
+  font-family: var(--wa-font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: var(--wa-lcd-green);
+  gap: 6px;
+}
+#winamp-chrome.wa-skin-ss1 .wa-readout .wa-bitrate,
+#winamp-chrome.wa-skin-ss1 .wa-readout .wa-srate,
+#winamp-chrome.wa-skin-ss1 .wa-readout .wa-channels {
+  color: var(--wa-lcd-green);
+  text-shadow: 0 0 3px rgba(0,255,102,0.5);
+}
+
+/* Player mount: strip outer inset frame, let inner pieces own their wells */
+#winamp-chrome.wa-skin-ss1 #audio-player-mount {
+  margin-top: 2px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount .audio-mount {
+  display: block;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount .panel-header {
+  display: none;
+}
+
+/* Track-title LCD (player.js injects div.lcd.lcd-scroll > span[data-role=lcd]) */
+#winamp-chrome.wa-skin-ss1 #audio-player-mount .lcd {
   background: var(--wa-lcd-bg);
   border-top: 1px solid var(--wa-bevel-dark);
   border-left: 1px solid var(--wa-bevel-dark);
@@ -376,21 +450,58 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   color: var(--wa-lcd-green);
   font-family: var(--wa-font-pixel);
   font-size: 11px;
-  text-shadow: 0 0 3px rgba(0,255,102,0.5);
-  padding: 2px 4px;
-}
-
-/* Readouts (bitrate / kHz / stereo): tiny pixel font, dimmer */
-#winamp-chrome.wa-skin-ss1 .wa-readouts {
-  font-family: var(--wa-font-pixel);
-  font-size: 9px;
-  color: var(--wa-lcd-green);
   letter-spacing: 0.5px;
+  padding: 1px 4px;
+  text-shadow: 0 0 3px rgba(0,255,102,0.5);
+  margin: 0;
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount [data-role="time"],
+#winamp-chrome.wa-skin-ss1 #audio-player-mount [data-role="loading"] {
+  font-family: var(--wa-font-pixel);
+  font-size: 10px;
+  color: var(--wa-lcd-green);
+  text-shadow: 0 0 2px rgba(0,255,102,0.4);
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount .mono.dim {
+  color: var(--wa-lcd-green);
+  margin: 2px 0;
+  padding: 0 2px;
 }
 
-/* Transport buttons: raised bevel, inset on active */
-#winamp-chrome.wa-skin-ss1 .wa-transport button,
-#winamp-chrome.wa-skin-ss1 .wa-clutter button {
+/* Visualizer canvas (player.js [data-role=viz]) — recessed LCD well */
+#winamp-chrome.wa-skin-ss1 #audio-player-mount canvas[data-role="viz"] {
+  display: block;
+  width: 100%;
+  height: 32px;
+  background: var(--wa-lcd-bg);
+  border-top: 1px solid var(--wa-bevel-dark);
+  border-left: 1px solid var(--wa-bevel-dark);
+  border-right: 1px solid var(--wa-bevel-light);
+  border-bottom: 1px solid var(--wa-bevel-light);
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
+  margin-top: 2px;
+}
+
+/* Transport row (player.js injects .player-controls > button.btn[data-act=...]) */
+#winamp-chrome.wa-skin-ss1 #audio-player-mount .player-controls {
+  display: inline-flex;
+  gap: 0;
+  margin: 3px 0 0 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  width: auto;
+  vertical-align: middle;
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount .player-controls .btn {
+  width: 22px;
+  height: 18px;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 100%);
   border-top: 1px solid var(--wa-bevel-light);
   border-left: 1px solid var(--wa-bevel-light);
@@ -398,13 +509,18 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   border-bottom: 1px solid var(--wa-bevel-dark);
   color: #000;
   font-family: var(--wa-font-pixel);
-  font-size: 10px;
-  padding: 2px 6px;
+  font-size: 11px;
+  line-height: 1;
   cursor: pointer;
+  text-shadow: none;
+  border-radius: 0;
 }
-#winamp-chrome.wa-skin-ss1 .wa-transport button:active,
-#winamp-chrome.wa-skin-ss1 .wa-clutter button:active,
-#winamp-chrome.wa-skin-ss1 .wa-clutter button[aria-pressed="true"] {
+#winamp-chrome.wa-skin-ss1 #audio-player-mount .player-controls .btn:hover {
+  color: #000;
+  border-color: inherit;
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount .player-controls .btn:active,
+#winamp-chrome.wa-skin-ss1 #audio-player-mount .player-controls .btn[aria-pressed="true"] {
   background: linear-gradient(180deg, var(--wa-chrome-mid) 0%, var(--wa-chrome-top) 100%);
   border-top: 1px solid var(--wa-bevel-dark);
   border-left: 1px solid var(--wa-bevel-dark);
@@ -413,51 +529,224 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   box-shadow: inset 1px 1px 2px rgba(0,0,0,0.4);
 }
 
-/* EQ panel: recessed inset, green-LED faders */
-#winamp-chrome.wa-skin-ss1 .wa-eq-panel {
-  background: linear-gradient(180deg, var(--wa-chrome-mid) 0%, var(--wa-chrome-bot) 100%);
+/* Volume slider (player.js injects input[type=range].vol[data-role=vol])
+   — narrow horizontal Winamp slider: dark LCD-well track + small chrome thumb */
+#winamp-chrome.wa-skin-ss1 #audio-player-mount input[type="range"].vol {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 68px;
+  height: 8px;
+  margin: 4px 0 0 6px;
+  padding: 0;
+  vertical-align: middle;
+  background: var(--wa-lcd-bg);
   border-top: 1px solid var(--wa-bevel-dark);
   border-left: 1px solid var(--wa-bevel-dark);
   border-right: 1px solid var(--wa-bevel-light);
   border-bottom: 1px solid var(--wa-bevel-light);
-  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
-  padding: 4px;
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
+  outline: none;
+  accent-color: transparent;
+  cursor: ew-resize;
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount input[type="range"].vol::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+  border: 0;
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount input[type="range"].vol::-moz-range-track {
+  height: 4px;
+  background: transparent;
+  border: 0;
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount input[type="range"].vol::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 8px;
+  margin-top: -1px;
+  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 100%);
+  border-top: 1px solid var(--wa-bevel-light);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  border-radius: 0;
+  cursor: ew-resize;
+}
+#winamp-chrome.wa-skin-ss1 #audio-player-mount input[type="range"].vol::-moz-range-thumb {
+  width: 11px;
+  height: 8px;
+  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 100%);
+  border-top: 1px solid var(--wa-bevel-light);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  border-radius: 0;
+  cursor: ew-resize;
 }
 
-/* Re-skin T13 faders as vertical LED slots with green handles */
-#winamp-chrome.wa-skin-ss1 .wa-fader,
-#winamp-chrome.wa-skin-ss1 input[type="range"].wa-fader {
+/* Clutter bar (#wa-eq, #wa-pl, #dade-sfx-toggle) */
+#winamp-chrome.wa-skin-ss1 .wa-clutter-bar {
+  margin-top: 3px;
+  padding: 2px 4px;
+  background: linear-gradient(180deg, var(--wa-chrome-mid) 0%, var(--wa-chrome-bot) 100%);
+  border-top: 1px solid var(--wa-bevel-dark);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-light);
+  gap: 2px;
+}
+#winamp-chrome.wa-skin-ss1 .wa-clutter {
+  width: 22px;
+  height: 12px;
+  padding: 0;
+  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 100%);
+  border-top: 1px solid var(--wa-bevel-light);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  color: #000;
+  font-family: var(--wa-font-pixel);
+  font-size: 9px;
+  line-height: 1;
+  text-shadow: none;
+}
+#winamp-chrome.wa-skin-ss1 .wa-clutter:active,
+#winamp-chrome.wa-skin-ss1 .wa-clutter[aria-pressed="true"] {
+  background: var(--wa-lcd-bg);
+  border-top: 1px solid var(--wa-bevel-dark);
+  border-left: 1px solid var(--wa-bevel-dark);
+  border-right: 1px solid var(--wa-bevel-light);
+  border-bottom: 1px solid var(--wa-bevel-light);
+  color: var(--wa-lcd-green);
+  text-shadow: 0 0 2px rgba(0,255,102,0.5);
+}
+#winamp-chrome.wa-skin-ss1 .wa-clutter-bar #dade-sfx-toggle {
+  margin-left: auto;
+  height: 12px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 100%);
+  border-top: 1px solid var(--wa-bevel-light);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  color: #000;
+  font-family: var(--wa-font-pixel);
+  font-size: 9px;
+}
+
+/* EQ panel — sized to chrome spec (~116px tall). Hidden by default; toggled via #wa-eq.
+   Do NOT force-open here: T13 UX expects #wa-eq[aria-pressed=true] to reveal. */
+#winamp-chrome.wa-skin-ss1 #winamp-eq {
+  margin-top: 2px;
+  padding: 4px;
+  height: 116px;
+  box-sizing: border-box;
+  background:
+    url(../images/winamp/bevel-sprite.svg) repeat-x top left,
+    linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 50%, var(--wa-chrome-bot) 100%);
+  border-top: 1px solid var(--wa-bevel-light);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  color: #000;
+}
+#winamp-chrome.wa-skin-ss1 #winamp-eq .eq-presets {
+  font-family: var(--wa-font-pixel);
+  font-size: 10px;
+  color: #000;
+  margin-bottom: 4px;
+  gap: 4px;
+}
+#winamp-chrome.wa-skin-ss1 #winamp-eq .eq-presets label {
+  color: #000;
+  font-size: 10px;
+}
+#winamp-chrome.wa-skin-ss1 #winamp-eq #eq-preset {
+  background: var(--wa-lcd-bg);
+  color: var(--wa-lcd-green);
+  font-family: var(--wa-font-pixel);
+  font-size: 10px;
+  border-top: 1px solid var(--wa-bevel-dark);
+  border-left: 1px solid var(--wa-bevel-dark);
+  border-right: 1px solid var(--wa-bevel-light);
+  border-bottom: 1px solid var(--wa-bevel-light);
+  padding: 0 2px;
+}
+#winamp-chrome.wa-skin-ss1 #winamp-eq #eq-reset {
+  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 100%);
+  border-top: 1px solid var(--wa-bevel-light);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  color: #000;
+  font-family: var(--wa-font-pixel);
+  font-size: 9px;
+  padding: 1px 4px;
+}
+#winamp-chrome.wa-skin-ss1 #winamp-eq .eq-faders {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2px;
+  margin: 0;
+}
+#winamp-chrome.wa-skin-ss1 #winamp-eq .eq-fader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+/* EQ faders — REAL selector is #winamp-eq .eq-fader input[type=range]
+   (eq-mixer.js renderMixerUI). Vertical Winamp LCD-well + green chrome thumb. */
+#winamp-chrome.wa-skin-ss1 #winamp-eq .eq-fader input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   writing-mode: vertical-lr;
   direction: rtl;
   width: 14px;
   height: 60px;
+  margin: 0;
+  padding: 0;
   background: var(--wa-lcd-bg);
   border-top: 1px solid var(--wa-bevel-dark);
   border-left: 1px solid var(--wa-bevel-dark);
   border-right: 1px solid var(--wa-bevel-light);
   border-bottom: 1px solid var(--wa-bevel-light);
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
+  accent-color: var(--wa-lcd-green);
   outline: none;
+  cursor: ns-resize;
 }
-#winamp-chrome.wa-skin-ss1 .wa-fader::-webkit-slider-thumb {
+#winamp-chrome.wa-skin-ss1 #winamp-eq .eq-fader input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
+  width: 12px;
   height: 6px;
   background: linear-gradient(180deg, #00FF66 0%, #008833 100%);
   border: 1px solid #000;
   box-shadow: 0 0 2px rgba(0,255,102,0.6);
   cursor: ns-resize;
+  border-radius: 0;
+}
+#winamp-chrome.wa-skin-ss1 #winamp-eq .eq-fader input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 6px;
+  background: linear-gradient(180deg, #00FF66 0%, #008833 100%);
+  border: 1px solid #000;
+  border-radius: 0;
+  box-shadow: 0 0 2px rgba(0,255,102,0.6);
+}
+#winamp-chrome.wa-skin-ss1 #winamp-eq .eq-fader-label {
+  font-family: var(--wa-font-pixel);
+  font-size: 9px;
+  color: #000;
+  letter-spacing: 0.5px;
 }
 
-/* Preset dropdown + ON/AUTO indicator strip */
-#winamp-chrome.wa-skin-ss1 .wa-preset,
-#winamp-chrome.wa-skin-ss1 select.wa-preset {
-  background: var(--wa-lcd-bg);
-  color: var(--wa-lcd-green);
-  font-family: var(--wa-font-pixel);
-  font-size: 10px;
-  border: 1px solid var(--wa-bevel-dark);
-  padding: 1px 2px;
-}
+/* Heights: main player ~116px is enforced by content; playlist (T14) reserves
+   the 275px width via the outer-frame rule above. */
