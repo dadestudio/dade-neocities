@@ -64,6 +64,28 @@ for dir in "${TARGETS[@]}"; do
   done < <(find "$dir" -type f \( -name '*.css' -o -name '*.js' \) -print0)
 done
 
+# Also hash repo-root JS that lives directly under build/ (e.g. script.js).
+# These are referenced from HTML without a directory prefix and otherwise miss
+# out on the cache-bust. Restrict to maxdepth 1 so we don't double-walk the
+# subdirectories already covered above.
+while IFS= read -r -d '' file; do
+  base="$(basename "$file")"
+  ext="${base##*.}"
+  name="${base%.*}"
+
+  if [[ "$name" =~ \.[0-9a-f]{8}$ ]]; then
+    continue
+  fi
+
+  hash="$(shasum -a 1 "$file" | cut -c1-8)"
+  newbase="${name}.${hash}.${ext}"
+  newpath="$(dirname "$file")/$newbase"
+
+  mv "$file" "$newpath"
+  printf '%s\t%s\n' "$base" "$newbase" >> "$MAP_FILE"
+  hashed=$((hashed + 1))
+done < <(find "$BUILD_DIR" -maxdepth 1 -type f -name '*.js' -print0)
+
 rewrites=0
 
 if [[ -s "$MAP_FILE" ]]; then
