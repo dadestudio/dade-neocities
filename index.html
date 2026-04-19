@@ -489,7 +489,11 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
       // textContent read) so identical per-frame writes are no-ops.
       var raw = el.getAttribute('data-raw');
       if (raw == null) raw = el.textContent || '';
-      if (raw === el.__lastRawText) return;
+      // If audio's per-frame textContent write replaced our glyph spans with a
+      // single text node, raw can equal __lastRawText (e.g. "0:00" === "0:00")
+      // yet glyphs are gone. Re-render whenever the children are missing.
+      var hasGlyphs = el.firstElementChild != null;
+      if (raw === el.__lastRawText && hasGlyphs) return;
       el.__lastRawText = raw;
       if (mo) mo.disconnect();
       try {
