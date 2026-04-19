@@ -480,9 +480,17 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
     el.__spriteAttached = true;
     var mo;
     function paint() {
-      var raw = el.textContent;
-      if (raw === el.__lastSrc) return;
-      el.__lastSrc = raw;
+      // Audio writes textContent every animation frame (see audio/player.js
+      // tick loop). Once we render glyph spans, el.textContent reads as ''
+      // until audio's next write puts a text node back. The value-guard
+      // below MUST run before disconnect/render or the time digits flash
+      // and the LCD glyphs get wiped out from under the marquee tick. We
+      // store the raw string on __lastRawText (a JS-property guard, not a
+      // textContent read) so identical per-frame writes are no-ops.
+      var raw = el.getAttribute('data-raw');
+      if (raw == null) raw = el.textContent || '';
+      if (raw === el.__lastRawText) return;
+      el.__lastRawText = raw;
       if (mo) mo.disconnect();
       try {
         if (kind === 'time') renderTime(el, raw);
