@@ -23,6 +23,13 @@ fi
 # Directories to scan for hashable .css / .js files.
 # Note: build/audio/soundfonts/ is excluded explicitly (80MB+ of SoundFont
 # .js samples that never change; re-hashing them is wasteful and pointless).
+#
+# Files in scope inside $BUILD_DIR/audio (auto-discovered via find):
+#   - audio/player.js
+#   - audio/sfx.js
+#   - audio/eq-mixer.js   (T13: per-GM-family mixer; routed via player.js
+#     ESM import so the hash-rewrite step picks up the bare path
+#     'audio/eq-mixer.js' inside the rewritten import specifier)
 TARGETS=(
   "$BUILD_DIR/styles"
   "$BUILD_DIR/audio"
@@ -89,11 +96,18 @@ done < <(find "$BUILD_DIR" -maxdepth 1 -type f -name '*.js' -print0)
 rewrites=0
 
 if [[ -s "$MAP_FILE" ]]; then
-  while IFS= read -r -d '' html; do
+  # Rewrite refs inside HTML and JS. JS coverage is needed so cross-module
+  # ESM imports (e.g. player.js -> ./eq-mixer.js, T13) survive hashing.
+  # Excludes the soundfont bundles for the same reason as the hashing pass.
+  while IFS= read -r -d '' target; do
+    case "$target" in
+      */audio/soundfonts/*) continue ;;
+      */sounds/soundfonts/*) continue ;;
+    esac
     changed=0
     while IFS=$'\t' read -r old new; do
       [[ -n "$old" && -n "$new" ]] || continue
-      if grep -q -F -- "$old" "$html"; then
+      if grep -q -F -- "$old" "$target"; then
         # Escape regex metacharacters in old basename. Filenames here only
         # contain alnum, `-`, `_`, `.` — so escaping `.` is sufficient.
         old_esc="${old//./\\.}"
@@ -102,14 +116,14 @@ if [[ -s "$MAP_FILE" ]]; then
         new_esc="${new//\\/\\\\}"
         new_esc="${new_esc//&/\\&}"
         new_esc="${new_esc//|/\\|}"
-        sed -i '' "s|${old_esc}|${new_esc}|g" "$html"
+        sed -i '' "s|${old_esc}|${new_esc}|g" "$target"
         changed=1
       fi
     done < "$MAP_FILE"
     if [[ $changed -eq 1 ]]; then
       rewrites=$((rewrites + 1))
     fi
-  done < <(find "$BUILD_DIR" -type f -name '*.html' -print0)
+  done < <(find "$BUILD_DIR" -type f \( -name '*.html' -o -name '*.js' \) -print0)
 fi
 
 echo "[hash-assets] hashed  ${hashed} file(s)"

@@ -10,6 +10,8 @@
  * (thousands of BufferSourceNodes saturate the audio thread).
  */
 
+import { createMixer, renderMixerUI, FAMILY_ORDER } from './eq-mixer.js';
+
 const GM_NAMES = [
   'acoustic_grand_piano','bright_acoustic_piano','electric_grand_piano','honkytonk_piano',
   'electric_piano_1','electric_piano_2','harpsichord','clavinet',
@@ -100,7 +102,7 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
   const ui = buildFullDOM(mountEl, compact);
   const instrumentCache = new Map();
 
-  let ctx = null, masterGain = null, analyser = null, freq = null;
+  let ctx = null, masterGain = null, analyser = null, freq = null, mixer = null;
   let uiVol = lsGetNum(LS_VOL, 0.6);
   let trackIdx = Math.max(0, Math.min(tracks.length - 1, Math.floor(lsGetNum(LS_IDX, 0))));
   let parsedMidi = null;
@@ -129,6 +131,11 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
     freq = new Uint8Array(analyser.frequencyBinCount);
     globalThis.__dadeAudioMasterIn = masterGain;
     globalThis.__dadeAudioAnalyser = analyser;
+    // T13: per-family fan-in lives between the instruments and masterGain.
+    // The masterGain -> analyser -> destination chain above is intentionally
+    // unchanged so the spectrum viz keeps reading the post-mix signal.
+    mixer = createMixer(ctx, masterGain);
+    wireMixerUI();
     applyVolume();
   }
 
@@ -147,13 +154,22 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
     return GM_NAMES[Math.max(0, Math.min(127, p))];
   }
 
+  function familyForInstrumentName(name) {
+    if (name === PERCUSSION_INST) return 'perc';
+    const idx = GM_NAMES.indexOf(name);
+    if (idx < 0) return 'other';
+    return mixer ? mixer.familyFor(idx, false) : 'other';
+  }
+
   async function ensureInstrument(name) {
     if (instrumentCache.has(name)) return instrumentCache.get(name);
+    const family = familyForInstrumentName(name);
+    const dest = (mixer && mixer.familyGains.get(family)) || masterGain;
     const opts = {
       soundfont: SF_HOST,
       format: 'mp3',
       nameToUrl: (n, sf) => `/sounds/soundfonts/${sf}/${n}-mp3.js`,
-      destination: masterGain,
+      destination: dest,
     };
     const isPerc = name === PERCUSSION_INST;
     const p = Soundfont.instrument(ctx, name, opts)
@@ -343,6 +359,15 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
   });
   if (ui.vol) ui.vol.addEventListener('input', () => setVolume(parseInt(ui.vol.value, 10) / 100));
 
+  let mixerUIReady = false;
+  function wireMixerUI() {
+    if (mixerUIReady || !mixer) return;
+    const root = document.getElementById('winamp-eq');
+    if (!root) return;
+    renderMixerUI(mixer, root);
+    mixerUIReady = true;
+  }
+
   const c2d = ui.viz && ui.viz.getContext('2d');
   const VW = ui.viz ? ui.viz.width : 0;
   const VH = ui.viz ? ui.viz.height : 0;
@@ -377,5 +402,9 @@ export function initPlayer({ mountEl, tracks, compact = false }) {
 
   setLCD();
 
-  return { play, pause, stop, next, prev, setVolume, setTrackIndex };
+  return {
+    play, pause, stop, next, prev, setVolume, setTrackIndex,
+    get mixer() { return mixer; },
+    families: FAMILY_ORDER,
+  };
 }

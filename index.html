@@ -118,8 +118,21 @@ img {
           <select id="track-select" class="wa-track-select" hidden aria-hidden="true"></select>
           <canvas id="viz" class="wa-viz" width="280" height="48" hidden aria-hidden="true"></canvas>
           <div id="audio-player-mount"></div>
+          <div id="winamp-eq" hidden>
+            <div class="eq-presets">
+              <label class="mono dim" for="eq-preset">PRESET</label>
+              <select id="eq-preset">
+                <option value="Flat">Flat</option>
+                <option value="Rock">Rock</option>
+                <option value="Dance">Dance</option>
+                <option value="Classical">Classical</option>
+              </select>
+              <button class="btn" id="eq-reset">RESET</button>
+            </div>
+            <div class="eq-faders" id="eq-faders"><!-- 7 faders rendered by JS --></div>
+          </div>
           <div class="wa-clutter-bar">
-            <button class="wa-clutter" id="wa-eq" aria-pressed="false" type="button">EQ</button>
+            <button class="wa-clutter" id="wa-eq" aria-pressed="false" type="button" title="per-family mixer">EQ</button>
             <button class="wa-clutter" id="wa-pl" aria-pressed="false" type="button">PL</button>
             <span id="dade-sfx-toggle" class="btn" role="button" tabindex="0">[ SFX: OFF ]</span>
           </div>
@@ -193,6 +206,10 @@ img {
     el.addEventListener('click', function(){
       var on = el.getAttribute('aria-pressed') === 'true';
       el.setAttribute('aria-pressed', on ? 'false' : 'true');
+      if (id === 'wa-eq') {
+        var panel = document.getElementById('winamp-eq');
+        if (panel) panel.hidden = on; // when previously on, hide; when off, show
+      }
     });
   });
 })();

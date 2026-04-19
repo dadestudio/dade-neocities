@@ -236,3 +236,83 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   outline: 1px dotted var(--wa-accent);
   outline-offset: 1px;
 }
+
+/* T13 — per-GM-family mixer panel (scoped under #winamp-eq) */
+#winamp-eq {
+  margin-top: 2px;
+  padding: 6px;
+  background: var(--wa-base);
+  border: 1px inset var(--wa-hi);
+  color: var(--wa-text);
+  font-family: var(--font-mono);
+}
+#winamp-eq[hidden] { display: none; }
+#winamp-eq .eq-presets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+#winamp-eq .eq-presets label {
+  color: var(--wa-text);
+  font-size: 10px;
+}
+#winamp-eq #eq-preset {
+  background: var(--wa-shadow);
+  color: var(--wa-accent);
+  border: 1px inset var(--wa-hi);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 2px;
+}
+#winamp-eq #eq-reset {
+  padding: 1px 6px;
+  font-size: 10px;
+  background: var(--wa-base);
+  color: var(--wa-text);
+  border: 1px outset var(--wa-hi);
+}
+#winamp-eq #eq-reset:hover {
+  color: var(--wa-accent);
+  border-color: var(--wa-accent);
+}
+#winamp-eq .eq-faders {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 4px;
+}
+#winamp-eq .eq-fader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 0;
+}
+#winamp-eq .eq-fader input[type="range"] {
+  -webkit-appearance: slider-vertical;
+  appearance: slider-vertical;
+  writing-mode: bt-lr; /* legacy fallback for non-WebKit */
+  width: 24px;
+  height: 100px;
+  background: var(--wa-shadow);
+  accent-color: var(--accent-neon);
+  cursor: ns-resize;
+}
+#winamp-eq .eq-fader input[type="range"]:focus {
+  outline: 1px dotted var(--accent-neon);
+}
+#winamp-eq .eq-fader-label {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--wa-text);
+}
+#winamp-eq .eq-fader input[type="range"]:active::-webkit-slider-thumb,
+#winamp-eq .eq-fader input[type="range"]:focus::-webkit-slider-thumb {
+  background: var(--accent-neon);
+  box-shadow: 0 0 4px var(--accent-neon);
+}
