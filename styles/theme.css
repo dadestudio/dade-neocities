@@ -316,3 +316,148 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   background: var(--accent-neon);
   box-shadow: 0 0 4px var(--accent-neon);
 }
+
+/* ===== T12.5 Winamp SS1 skin fidelity pass ===== */
+/* Palette lock */
+#winamp-chrome.wa-skin-ss1 {
+  --wa-chrome-top: #D8DCE4;
+  --wa-chrome-mid: #8A92A8;
+  --wa-chrome-bot: #3A4050;
+  --wa-bevel-light: #E8ECF4;
+  --wa-bevel-dark: #1A1E28;
+  --wa-lcd-bg: #0A1A2A;
+  --wa-lcd-green: #00FF66;
+  --wa-lcd-yellow: #FFCC33;
+  --wa-text-dim: #6A7288;
+  --wa-font-pixel: "VT323", "Courier New", Courier, monospace;
+}
+
+/* Outer frame: raised bevel + gradient chrome */
+#winamp-chrome.wa-skin-ss1 {
+  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 50%, var(--wa-chrome-bot) 100%);
+  border-top: 1px solid var(--wa-bevel-light);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.3), inset -1px -1px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.5);
+  image-rendering: pixelated;
+}
+
+/* Title bar with lightning bolt */
+#winamp-chrome.wa-skin-ss1 .wa-titlebar {
+  background: linear-gradient(180deg, #5A7AAA 0%, #3A5A8A 100%);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  padding: 2px 4px;
+  font-family: var(--wa-font-pixel);
+  font-size: 10px;
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0 #000;
+  position: relative;
+}
+#winamp-chrome.wa-skin-ss1 .wa-titlebar::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  background: url(../images/winamp/lightning.svg) no-repeat center/contain;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* LCD well: recessed, dark navy, green pixel text */
+#winamp-chrome.wa-skin-ss1 .wa-lcd,
+#winamp-chrome.wa-skin-ss1 #viz {
+  background: var(--wa-lcd-bg);
+  border-top: 1px solid var(--wa-bevel-dark);
+  border-left: 1px solid var(--wa-bevel-dark);
+  border-right: 1px solid var(--wa-bevel-light);
+  border-bottom: 1px solid var(--wa-bevel-light);
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
+  color: var(--wa-lcd-green);
+  font-family: var(--wa-font-pixel);
+  font-size: 11px;
+  text-shadow: 0 0 3px rgba(0,255,102,0.5);
+  padding: 2px 4px;
+}
+
+/* Readouts (bitrate / kHz / stereo): tiny pixel font, dimmer */
+#winamp-chrome.wa-skin-ss1 .wa-readouts {
+  font-family: var(--wa-font-pixel);
+  font-size: 9px;
+  color: var(--wa-lcd-green);
+  letter-spacing: 0.5px;
+}
+
+/* Transport buttons: raised bevel, inset on active */
+#winamp-chrome.wa-skin-ss1 .wa-transport button,
+#winamp-chrome.wa-skin-ss1 .wa-clutter button {
+  background: linear-gradient(180deg, var(--wa-chrome-top) 0%, var(--wa-chrome-mid) 100%);
+  border-top: 1px solid var(--wa-bevel-light);
+  border-left: 1px solid var(--wa-bevel-light);
+  border-right: 1px solid var(--wa-bevel-dark);
+  border-bottom: 1px solid var(--wa-bevel-dark);
+  color: #000;
+  font-family: var(--wa-font-pixel);
+  font-size: 10px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+#winamp-chrome.wa-skin-ss1 .wa-transport button:active,
+#winamp-chrome.wa-skin-ss1 .wa-clutter button:active,
+#winamp-chrome.wa-skin-ss1 .wa-clutter button[aria-pressed="true"] {
+  background: linear-gradient(180deg, var(--wa-chrome-mid) 0%, var(--wa-chrome-top) 100%);
+  border-top: 1px solid var(--wa-bevel-dark);
+  border-left: 1px solid var(--wa-bevel-dark);
+  border-right: 1px solid var(--wa-bevel-light);
+  border-bottom: 1px solid var(--wa-bevel-light);
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.4);
+}
+
+/* EQ panel: recessed inset, green-LED faders */
+#winamp-chrome.wa-skin-ss1 .wa-eq-panel {
+  background: linear-gradient(180deg, var(--wa-chrome-mid) 0%, var(--wa-chrome-bot) 100%);
+  border-top: 1px solid var(--wa-bevel-dark);
+  border-left: 1px solid var(--wa-bevel-dark);
+  border-right: 1px solid var(--wa-bevel-light);
+  border-bottom: 1px solid var(--wa-bevel-light);
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
+  padding: 4px;
+}
+
+/* Re-skin T13 faders as vertical LED slots with green handles */
+#winamp-chrome.wa-skin-ss1 .wa-fader,
+#winamp-chrome.wa-skin-ss1 input[type="range"].wa-fader {
+  -webkit-appearance: none;
+  appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 14px;
+  height: 60px;
+  background: var(--wa-lcd-bg);
+  border-top: 1px solid var(--wa-bevel-dark);
+  border-left: 1px solid var(--wa-bevel-dark);
+  border-right: 1px solid var(--wa-bevel-light);
+  border-bottom: 1px solid var(--wa-bevel-light);
+  outline: none;
+}
+#winamp-chrome.wa-skin-ss1 .wa-fader::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 6px;
+  background: linear-gradient(180deg, #00FF66 0%, #008833 100%);
+  border: 1px solid #000;
+  box-shadow: 0 0 2px rgba(0,255,102,0.6);
+  cursor: ns-resize;
+}
+
+/* Preset dropdown + ON/AUTO indicator strip */
+#winamp-chrome.wa-skin-ss1 .wa-preset,
+#winamp-chrome.wa-skin-ss1 select.wa-preset {
+  background: var(--wa-lcd-bg);
+  color: var(--wa-lcd-green);
+  font-family: var(--wa-font-pixel);
+  font-size: 10px;
+  border: 1px solid var(--wa-bevel-dark);
+  padding: 1px 2px;
+}

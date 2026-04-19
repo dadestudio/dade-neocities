@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 4" width="1" height="4" preserveAspectRatio="none">
+  <title>Winamp chrome bevel gradient strip</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#D8DCE4"/>
+      <stop offset="33%"  stop-color="#8A92A8"/>
+      <stop offset="66%"  stop-color="#5A6278"/>
+      <stop offset="100%" stop-color="#3A4050"/>
+    </linearGradient>
+  </defs>
+  <rect width="1" height="4" fill="url(#g)"/>
+</svg>

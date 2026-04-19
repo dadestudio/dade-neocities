@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 16" width="12" height="16" shape-rendering="crispEdges">
+  <title>Winamp lightning bolt</title>
+  <polygon points="7,0 1,9 5,9 3,16 11,6 6,6 9,0"
+           fill="#FFCC33" stroke="#B8860B" stroke-width="1" stroke-linejoin="miter"/>
+</svg>
