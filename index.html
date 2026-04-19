@@ -507,14 +507,6 @@ if (playerMount) initPlayer({ mountEl: playerMount, tracks: TRACKS, compact: fal
     for (var k = 0; k < nums.length; k++) attach(nums[k], 'text-numeric');
     var ch = document.querySelectorAll('.wa-channels');
     for (var n = 0; n < ch.length; n++) attach(ch[n], 'channels');
-    var tbar = document.querySelector('#winamp-chrome .wa-titlebar');
-    if (tbar && !tbar.querySelector('.wa-wordmark')) {
-      var wm = document.createElement('span');
-      wm.className = 'wa-wordmark';
-      wm.setAttribute('aria-hidden', 'true');
-      tbar.appendChild(wm);
-      renderText(wm, 'WINAMP');
-    }
   }
   attachAll();
 

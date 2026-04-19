@@ -198,6 +198,17 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
 }
 #winamp-chrome .wa-titlebar > * { display: none; }
 
+/* Defense-in-depth — kill any inherited theme text (VT323 / --accent-neon)
+   from leaking into titlebar children. Sprite backgrounds are unaffected
+   because they paint via background-image; aria-labels remain readable to
+   screen readers regardless of font-size. */
+#winamp-chrome .wa-titlebar,
+#winamp-chrome .wa-titlebar * {
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+}
+
 /* The kbps/khz/stereo readouts ride on top of main.png as live HTML
    spans rendered with the text.png bitmap font (see sprite-glyph block
    below). Each child is positioned at its canonical Winamp coords:
@@ -311,10 +322,15 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
 /* Time digits — sprite-sliced from numbers.png (9x13 cells) by the
    inline sprite-text observer. The colon between minutes and seconds
    is emitted from text.png (numbers.png has no colon glyph) and
-   centered vertically in the 13px digit row via .sprite-time-colon. */
+   centered vertically in the 13px digit row via .sprite-time-colon.
+   Wrapper .mono.dim is reset to position:static so the absolute
+   coords on [data-role="time"] resolve against the .audio-mount /
+   #audio-player-mount coordinate space (canonical Base 2.91 LCD well
+   at left=48 top=26 inside the 275x116 chrome). */
+#winamp-chrome [data-role="time"],
 #winamp-chrome #audio-player-mount [data-role="time"] {
   position: absolute;
-  left: 36px;
+  left: 48px;
   top: 26px;
   width: 63px;
   height: 13px;
@@ -325,15 +341,12 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   color: transparent;
   letter-spacing: 0;
   white-space: nowrap;
+  image-rendering: pixelated;
 }
 #winamp-chrome #audio-player-mount [data-role="time"] + .sf-loading,
 #winamp-chrome #audio-player-mount [data-role="loading"] { display: none; }
 #winamp-chrome #audio-player-mount .audio-mount > .mono.dim {
-  position: absolute;
-  left: 36px;
-  top: 26px;
-  width: 80px;
-  height: 13px;
+  position: static;
   margin: 0;
   padding: 0;
   background: transparent;

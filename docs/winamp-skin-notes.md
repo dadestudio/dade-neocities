@@ -62,7 +62,7 @@ overlay live controls at the canonical pixel coordinates below.
 | Region                | x   | y   | w   | h  |
 | --------------------- | --- | --- | --- | -- |
 | Title bar             | 0   | 0   | 275 | 14 |
-| Time digits area      | 36  | 26  | 63  | 13 |
+| Time digits area      | 48  | 26  | 63  | 13 |
 | Track scroller well   | 111 | 27  | 154 | 6  |
 | Visualizer well       | 24  | 43  | 76  | 16 |
 | Mono / stereo indicators | 212 | 41 | 56 | 12 |
@@ -128,10 +128,12 @@ Cursor sprites at the same `(15, 422)` / `(0, 422)` offsets as volume.
 ### `numbers.png` — time digits (99 × 13)
 
 10 digits laid horizontally (9 × 13 each). Per-digit
-`background-position: -<digit*9>px 0`. Currently only referenced from
-docs; the live time string in `#audio-player-mount [data-role="time"]`
-is rendered with VT323 styled to match because per-digit sprite spans
-would require touching `audio/player.js`, which is locked.
+`background-position: -<digit*9>px 0`. The live time string in
+`#audio-player-mount [data-role="time"]` is rebuilt as a row of
+`<span class="sprite-glyph sprite-number">` cells by the inline
+`spriteText` `MutationObserver` in `index.html` — `audio/player.js`
+remains untouched (writes plain text via `textContent`; observer
+intercepts and replaces with sprite spans).
 
 ### `text.png` — bitmap font (155 × 74)
 
@@ -257,6 +259,45 @@ Aliases (re-using existing glyphs):
 
 Cell dims: `5 × 6`. Sheet dims: `155 × 74` (declared `background-size`).
 
+### Main-window time readout
+
+The black LCD time well on `main.png` lives at canonical
+`(48, 26, 63, 13)` inside `#winamp-chrome` — measured against
+`sips`-verified `main.png` (`275 × 13`) and confirmed pixel-by-pixel
+against the recess in the gradient bake. The wrapper element
+`[data-role="time"]` (emitted by `audio/player.js` inside its
+generated `<div class="mono dim">` container) is positioned absolute
+at exactly that rect. The parent `.mono.dim` wrapper is reset to
+`position: static` inside the chrome scope so the time wrapper's
+absolute coords resolve against `.audio-mount` / `#audio-player-mount`
+(the `275 × 116` chrome coordinate space) rather than the inline-flow
+parent. Without that reset, the time digits double-offset by the
+parent's left/top and land outside the LCD well.
+
+| element                  | left | top | w  | h  | source             |
+| ------------------------ | ---- | --- | -- | -- | ------------------ |
+| LCD time well (recessed) | 48   | 26  | 63 | 13 | `main.png` bake    |
+| `[data-role="time"]`     | 48   | 26  | 63 | 13 | wraps digit spans  |
+| `MM` digits              | 48   | 26  | 18 | 13 | 2 × `sprite-number` (9 × 13) from `numbers.png` |
+| `:` colon glyph          | 66   | 26  |  5 | 13 | `sprite-time-colon` from `text.png` (vertical-centered via 3 / 4 px margin) |
+| `SS` digits              | 71   | 26  | 18 | 13 | 2 × `sprite-number` (9 × 13) from `numbers.png` |
+
+`numbers.png` is `99 × 13` — verified via
+`sips -g pixelWidth -g pixelHeight` — with 10 digits packed at
+`x = 0, 9, 18, ..., 81`. There is no colon glyph in `numbers.png`
+(the cell at `x = 90` is the blank/`NO_MINUS_SIGN` `5 × 1` strip at
+`y = 6`); the time renderer therefore emits a `:` from `text.png`
+between the minute and second digits and centers it vertically in
+the 13 px digit row via `.sprite-time-colon { margin-top: 3px;
+margin-bottom: 4px; }`.
+
+The CSS rule lives at `#winamp-chrome [data-role="time"]` (and the
+more-specific `#winamp-chrome #audio-player-mount [data-role="time"]`
+for resilience against DOM relocations). It only positions the
+wrapper — the per-digit `background-position` writes happen inline
+inside `makeNumberGlyph` in the `spriteText` IIFE so each digit picks
+up its `-d * 9px 0` offset without needing a static rule per digit.
+
 ### Track-scroller marquee
 
 The audio module writes the track title via `textContent` on
@@ -271,14 +312,22 @@ spans.
 
 ### Title-bar wordmark
 
-`text.png` glyphs render `WINAMP` (6 chars × 5 px = 30 px wide) into
-`#winamp-chrome .wa-titlebar > .wa-wordmark`, positioned at left = 100
-top = 4 inside the 14 px-tall titlebar so it sits centered over the
-spot where the original `main.png` art had the same wordmark baked in.
-There is no dedicated lightning-bolt sprite in `titlebar.png` (only the
-"Easter egg" titlebar variants at y = 57/72 contain bolt art baked into
-the gradient), so the bolt remains painted by `main.png`; no separate
-glyph element is required.
+The `WINAMP` wordmark is baked into the active titlebar strip in
+`titlebar.png` (`sx = 27, sy = 0, 275 × 14`) which `.wa-titlebar`
+paints as its background-image. No `.wa-wordmark` overlay element is
+created — an earlier pass injected one and rebuilt it as `text.png`
+glyphs via the `spriteText` observer, but that overlay leaked the
+inherited theme accent color (green VT323 "WINAMP" text) on top of
+the otherwise pixel-correct sprite. Dropping the JS injection lets
+the titlebar.png bake show through cleanly. The orphan
+`#winamp-chrome .wa-titlebar > .wa-wordmark` rule remains in
+`theme.css` as a no-op (no element matches) and is harmless.
+
+There is no dedicated lightning-bolt sprite in the active strip
+itself (only the "Easter egg" titlebar variants at `y = 57 / 72`
+contain bolt art baked into the gradient); the bolt is overlaid
+separately as `.wa-bolt` from the top-left `9 × 9` sprite cell of
+`titlebar.png`.
 
 ## Clutter button states
 
