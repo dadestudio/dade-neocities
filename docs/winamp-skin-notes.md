@@ -454,3 +454,199 @@ The drag-handle region (`.wa-title[data-role="drag-handle"]`) is the
 strip area between the bolt's right edge and the minimize button —
 left = 16, top = 3, width = 224, height = 9 inside `#winamp-chrome` —
 marked with `cursor: move` only; no drag wiring this run.
+
+## Transport buttons (cbuttons.png)
+
+Verified sheet dimensions:
+
+```
+$ sips -g pixelWidth -g pixelHeight images/winamp-skin/base-2.91/cbuttons.png
+/Users/dade/Projects/dade-neocities/images/winamp-skin/base-2.91/cbuttons.png
+  pixelWidth: 136
+  pixelHeight: 36
+```
+
+Sprite map (cross-checked against `webamp/js/skinSprites.ts` `CBUTTONS`):
+
+| sprite                       | sx  | sy | w  | h  |
+| ---------------------------- | --- | -- | -- | -- |
+| `MAIN_PREVIOUS_BUTTON`       |   0 |  0 | 23 | 18 |
+| `MAIN_PREVIOUS_BUTTON_ACTIVE`|   0 | 18 | 23 | 18 |
+| `MAIN_PLAY_BUTTON`           |  23 |  0 | 23 | 18 |
+| `MAIN_PLAY_BUTTON_ACTIVE`    |  23 | 18 | 23 | 18 |
+| `MAIN_PAUSE_BUTTON`          |  46 |  0 | 23 | 18 |
+| `MAIN_PAUSE_BUTTON_ACTIVE`   |  46 | 18 | 23 | 18 |
+| `MAIN_STOP_BUTTON`           |  69 |  0 | 23 | 18 |
+| `MAIN_STOP_BUTTON_ACTIVE`    |  69 | 18 | 23 | 18 |
+| `MAIN_NEXT_BUTTON`           |  92 |  0 | 23 | 18 |
+| `MAIN_NEXT_BUTTON_ACTIVE`    |  92 | 18 | 22 | 18 |
+| `MAIN_EJECT_BUTTON`          | 114 |  0 | 22 | 16 |
+| `MAIN_EJECT_BUTTON_ACTIVE`   | 114 | 16 | 22 | 16 |
+
+Canonical placement inside the 275 × 116 main window, derived from
+`webamp/css/main-window.css` `.actions div` block + the dedicated
+`#eject` rule. Eject sits 1 px lower than the prev/play/pause/stop/next
+row and is 16 (not 18) px tall:
+
+| element  | left | top | w  | h  | source                           |
+| -------- | ---- | --- | -- | -- | -------------------------------- |
+| prev     |  16  | 88  | 23 | 18 | `webamp .actions #previous`      |
+| play     |  39  | 88  | 23 | 18 | `webamp .actions #play`          |
+| pause    |  62  | 88  | 23 | 18 | `webamp .actions #pause`         |
+| stop     |  85  | 88  | 23 | 18 | `webamp .actions #stop`          |
+| next     | 108  | 88  | 22 | 18 | `webamp .actions #next` (w=22)   |
+| eject    | 136  | 89  | 22 | 16 | `webamp #eject`                  |
+
+The five wired transport buttons (prev / play / pause / stop / next) come
+from `audio/player.js` (`<button class="btn" data-act="…">`) and are
+positioned by the existing `.player-controls` flex row at left=16,
+top=88 (no explicit per-button absolute coords — they layout in flex
+order with gap=0 so the canonical x falls into place). The eject button
+is added separately as `<button class="wa-eject" type="button">` inside
+`#winamp-chrome` because `audio/player.js` does not emit one and is not
+modifiable in this run (architecture lock). Eject is decorative — no
+click handler is wired this run; it shows its pressed sprite on
+`:active` only.
+
+CSS swaps `background-position-y` from 0 to -18 px on `:active` for the
+five wired buttons (they share an 18 px sprite frame), and from 0 to
+-16 px on `:active` for eject (16 px sprite frame).
+
+## Position bar (posbar.png)
+
+Verified sheet dimensions:
+
+```
+$ sips -g pixelWidth -g pixelHeight images/winamp-skin/base-2.91/posbar.png
+/Users/dade/Projects/dade-neocities/images/winamp-skin/base-2.91/posbar.png
+  pixelWidth: 307
+  pixelHeight: 10
+```
+
+Sprite map (per `webamp/js/skinSprites.ts` `POSBAR`):
+
+| sprite                                  | sx  | sy | w   | h  |
+| --------------------------------------- | --- | -- | --- | -- |
+| `MAIN_POSITION_SLIDER_BACKGROUND`       |   0 |  0 | 248 | 10 |
+| `MAIN_POSITION_SLIDER_THUMB`            | 248 |  0 |  29 | 10 |
+| `MAIN_POSITION_SLIDER_THUMB_SELECTED`   | 278 |  0 |  29 | 10 |
+
+Canonical placement inside the 275 × 116 main window
+(`webamp .actions` block, `#position`):
+
+| element              | left | top | w   | h  |
+| -------------------- | ---- | --- | --- | -- |
+| Position slider rect |  16  | 72  | 248 | 10 |
+
+This run swaps the prior `.wa-posbar` decorative span for an
+`<input type="range" data-role="posbar">` styled via
+`::-webkit-slider-runnable-track` (background = the empty crop sprite
+slice at `0 0 248 10`) and `::-webkit-slider-thumb` / `::-moz-range-*`
+(background = the 29 × 10 thumb sprite at sx=248 normal, sx=278
+pressed). The decorative `.wa-posbar` span underneath is retained so
+the empty crop is always painted regardless of native range styling
+support, and shipping byte-for-byte unchanged when no track is loaded.
+
+The thumb is gated on `body.track-loaded` — the inline IIFE in
+`index.html` toggles that class on `data-act="play|pause|next|prev"`
+clicks (add) and `data-act="stop"` clicks (remove) inside the audio
+mount. `audio/player.js` is unchanged.
+
+## Volume slider (volume.png)
+
+Verified sheet dimensions:
+
+```
+$ sips -g pixelWidth -g pixelHeight images/winamp-skin/base-2.91/volume.png
+/Users/dade/Projects/dade-neocities/images/winamp-skin/base-2.91/volume.png
+  pixelWidth: 68
+  pixelHeight: 433
+```
+
+Sprite map (per `webamp/js/skinSprites.ts` `VOLUME`):
+
+| sprite                       | sx | sy  | w  | h   |
+| ---------------------------- | -- | --- | -- | --- |
+| `MAIN_VOLUME_BACKGROUND`     |  0 |   0 | 68 | 420 |
+| `MAIN_VOLUME_THUMB`          | 15 | 422 | 14 |  11 |
+| `MAIN_VOLUME_THUMB_SELECTED` |  0 | 422 | 14 |  11 |
+
+The 420 px tall background is 28 frames stacked vertically at 15 px
+pitch (`webamp/js/components/MainWindow/MainVolume.tsx` computes the
+offset as `(sprite - 1) * 15` for sprite index 1..28; we use 0..27 so
+the offset is `frame * -15px`). Each rendered frame is 68 × 14 px
+visible with 1 px gutter; total per-frame stride = 15 px exactly.
+
+Canonical placement inside the 275 × 116 main window
+(`webamp #volume`):
+
+| element              | left | top | w  | h  |
+| -------------------- | ---- | --- | -- | -- |
+| Volume slider rect   | 107  | 57  | 68 | 14 |
+
+CSS reads the `--vol-frame` custom property (set on `input` event by
+the existing inline script in `index.html`) to slide
+`background-position-y` to `frame * -15px`. The native range thumb
+swaps from `(15, 422)` (normal) to `(0, 422)` (pressed) on `:active`.
+
+## Balance slider (balance.png)
+
+Verified sheet dimensions:
+
+```
+$ sips -g pixelWidth -g pixelHeight images/winamp-skin/base-2.91/balance.png
+/Users/dade/Projects/dade-neocities/images/winamp-skin/base-2.91/balance.png
+  pixelWidth: 68
+  pixelHeight: 433
+```
+
+Sprite map (per `webamp/js/skinSprites.ts` `BALANCE`):
+
+| sprite                        | sx | sy  | w  | h   |
+| ----------------------------- | -- | --- | -- | --- |
+| `MAIN_BALANCE_BACKGROUND`     |  9 |   0 | 38 | 420 |
+| `MAIN_BALANCE_THUMB`          | 15 | 422 | 14 |  11 |
+| `MAIN_BALANCE_THUMB_ACTIVE`   |  0 | 422 | 14 |  11 |
+
+The 420 px tall background uses the same 15 px frame pitch as
+`volume.png` (28 frames, 0..27). The active rendered region is 38 px
+wide starting at sx=9 within the 68 px sheet (i.e.
+`background-position-x: -9px`); previous build used `-15px` which
+shifted the groove 6 px right vs canonical — corrected this run.
+
+Canonical placement inside the 275 × 116 main window
+(`webamp #balance`):
+
+| element              | left | top | w  | h  |
+| -------------------- | ---- | --- | -- | -- |
+| Balance slider rect  | 177  | 57  | 38 | 14 |
+
+Frame index for balance = `round(|balance| * 27)` (frame 0 = centered
+"no offset"). The native range thumb swaps from `(15, 422)` (normal)
+to `(0, 422)` (pressed) on `:active`.
+
+## Slider tooltips (`.wa-tooltip`)
+
+Volume + balance show a hover/focus tooltip rendered with the existing
+`text.png` bitmap-font glyph helper (no `VT323`, no real text). The
+tooltip span is positioned absolutely inside `#winamp-chrome` ~14 px
+above the slider track:
+
+| tooltip          | left | top | source slider                   |
+| ---------------- | ---- | --- | ------------------------------- |
+| `data-tip-for=vol` | 107 | 43 | volume slider at (107, 57)      |
+| `data-tip-for=bal` | 177 | 43 | balance slider at (177, 57)     |
+
+Content strings:
+
+- volume → `"VOLUME: NN%"` (NN = round(value / max * 100))
+- balance, value < 0 → `"BALANCE: LEFT NN%"`
+- balance, value = 0 → `"BALANCE: CENTER"`
+- balance, value > 0 → `"BALANCE: RIGHT NN%"`
+
+Show on `pointerenter` / `focus`, hide on `pointerleave` / `blur`.
+The inline IIFE in `index.html` reuses the existing `renderText`
+helper (exposed on `window.__waRenderText` from the `spriteText`
+IIFE) to write the tooltip glyph row in place — no duplication of
+`FONT_LOOKUP`. Hidden state uses the `hidden` HTML attribute so the
+element collapses entirely when not active.
