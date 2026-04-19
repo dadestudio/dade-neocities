@@ -56,3 +56,10 @@
   font-size: var(--fs-sm);
 }
 .btn:hover { color: var(--accent-neon); border-color: var(--accent-neon); text-decoration: none; }
+.seg-nav { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.seg-btn.active { color: var(--accent-neon); border-color: var(--accent-neon); }
+.seg-list { list-style: none; padding: 0; margin: 0; }
+.seg-list li { padding: var(--space-1) 0; border-bottom: 1px dashed var(--panel-border); }
+.badges { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.gb-preview { list-style: none; padding: 0; margin: 0 0 var(--space-3) 0; }
+.gb-preview li { padding: var(--space-2) 0; border-bottom: 1px dashed var(--panel-border); }

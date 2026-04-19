@@ -61,159 +61,114 @@ img {
       </ul>
     </aside>
     <main id="main">
-      <div class="panel"><h2 class="panel-header">PAGE: home</h2><p>Placeholder, rebuilt in P3/P5.</p></div>
+      <!-- 1. Header strip -->
+      <section class="panel" id="header-strip">
+        <h1 class="mono neon" style="font-size: var(--fs-xl); margin: 0;">dadeog.neocities.org</h1>
+        <p class="dim mono" style="margin: var(--space-1) 0 0 0;">&gt; status: online // uptime: since 2026 // view source friendly</p>
+      </section>
+
+      <!-- 2. Neighborhood (segmented links) -->
+      <section class="panel" id="neighborhood">
+        <h2 class="panel-header">// neighborhood</h2>
+        <nav class="seg-nav mono">
+          <button class="btn seg-btn active" data-seg="friends">FRIENDS</button>
+          <button class="btn seg-btn" data-seg="cool">COOL SITES</button>
+          <button class="btn seg-btn" data-seg="updates">UPDATES</button>
+        </nav>
+        <ul id="seg-friends" class="seg-list mono">
+          <li><a href="#">[ placeholder-friend-01 ]</a></li>
+          <li><a href="#">[ placeholder-friend-02 ]</a></li>
+          <li><a href="#">[ placeholder-friend-03 ]</a></li>
+        </ul>
+        <ul id="seg-cool" class="seg-list mono" hidden>
+          <li><a href="https://petrapixel.neocities.org/">petrapixel.neocities.org</a></li>
+          <li><a href="https://neocities.org/browse">neocities.org/browse</a></li>
+        </ul>
+        <ul id="seg-updates" class="seg-list mono" hidden>
+          <li><span class="tag">2026-04-18</span> phase 9 layout pivot started</li>
+          <li><span class="tag">2026-04-18</span> T4 interactive stack shipped</li>
+        </ul>
+      </section>
+
+      <!-- 3. About blurb -->
+      <section class="panel" id="about-blurb">
+        <h2 class="panel-header">// about</h2>
+        <p>Personal site. 1998 web energy, 2026 build tooling. Dark retro-tech, not cute retro.</p>
+        <p><a href="pages/about.html">&gt; read more</a></p>
+      </section>
+
+      <!-- 4. Now Playing (T3 audio re-mounts here in P5) -->
+      <section class="panel" id="now-playing">
+        <h2 class="panel-header">// now playing</h2>
+        <div id="audio-player-mount">
+          <p class="dim mono">[ audio player re-mounts in P5 ]</p>
+        </div>
+      </section>
+
+      <!-- 5. Webrings / Cliques / Awards -->
+      <section class="panel" id="badge-grid">
+        <h2 class="panel-header">// webrings // cliques // awards</h2>
+        <div class="badges">
+          <span class="tag">[ webring: yesterweb ]</span>
+          <span class="tag">[ clique: bbs_kids ]</span>
+          <span class="tag">[ award: best viewed @ 1280x800 ]</span>
+        </div>
+      </section>
+
+      <!-- 6. Guestbook preview -->
+      <section class="panel" id="guestbook-preview">
+        <h2 class="panel-header">// guestbook</h2>
+        <ul class="gb-preview mono">
+          <li><strong>xXlinkin_parkXx</strong> <span class="dim">1999-03-14</span><br>sick site dude</li>
+          <li><strong>gh0stly_sk8r</strong> <span class="dim">1999-04-02</span><br>add me to your links pls</li>
+          <li><strong>shredder99</strong> <span class="dim">1999-04-17</span><br>was here</li>
+        </ul>
+        <p><a href="pages/guestbook.html">&gt; sign the guestbook</a></p>
+      </section>
+
+      <!-- 7. Footer -->
+      <footer class="panel" id="footer">
+        <p class="dim mono" style="margin: 0;">built by dade with cursor + opus 4.7 // view source friendly since forever</p>
+      </footer>
     </main>
     <aside id="widgets">
-      <div class="widget"><h2 class="panel-header">WIDGETS</h2><p class="dim">Re-mounted in P5.</p></div>
+      <div class="widget" id="hit-counter-widget">
+        <h2 class="panel-header">// visitors</h2>
+        <p class="mono neon" style="font-size: var(--fs-xl); margin: 0;" id="hit-counter">000000</p>
+        <p class="dim mono" style="margin: var(--space-1) 0 0 0;">all-time hits</p>
+      </div>
+      <div class="widget" id="live-visitors-widget">
+        <h2 class="panel-header">// live</h2>
+        <p class="mono" id="live-visitors">[ 1 visitor online ]</p>
+      </div>
+      <div class="widget" id="fx-toggles-mount">
+        <h2 class="panel-header">// fx</h2>
+        <p class="dim mono">[ CRT + STARS toggles re-mount here in P5 ]</p>
+      </div>
+      <div class="widget" id="status-scroller-widget">
+        <h2 class="panel-header">// status</h2>
+        <p class="mono" id="status-scroller">welcome to my homepage</p>
+      </div>
     </aside>
   </div>
 
-<script src="script.js" defer></script>
-<script type="module">
-import { initCRT, setCRTEnabled } from './effects/crt.js';
-import { initStarfield, setStarsEnabled } from './effects/starfield.js';
-import { tracks } from './audio/synth.js';
-import { initMidiPlayer } from './audio/midi-player.js';
-import { initSFX } from './audio/sfx.js';
-
-function readBool(key, def) {
-  try {
-    var v = localStorage.getItem(key);
-    if (v === null) return def;
-    return v !== 'false';
-  } catch (e) {
-    return def;
-  }
-}
-
-function crtLabel(on) {
-  return '[ CRT: ' + (on ? 'ON' : 'OFF') + ' ]';
-}
-function starsLabel(on) {
-  return '[ STARS: ' + (on ? 'ON' : 'OFF') + ' ]';
-}
-
-var crtBtn = document.getElementById('dade-toggle-crt');
-var starsBtn = document.getElementById('dade-toggle-stars');
-var crtCanvas = document.getElementById('dade-crt');
-var starCanvas = document.getElementById('dade-starfield');
-
-var crtOn = readBool('crt_enabled', true);
-var starsOn = readBool('stars_enabled', true);
-
-crtBtn.textContent = crtLabel(crtOn);
-starsBtn.textContent = starsLabel(starsOn);
-
-initCRT({ canvas: crtCanvas, enabled: crtOn });
-initStarfield({ canvas: starCanvas });
-
-crtBtn.addEventListener('click', function () {
-  crtOn = !crtOn;
-  setCRTEnabled(crtOn);
-  crtBtn.textContent = crtLabel(crtOn);
-});
-
-starsBtn.addEventListener('click', function () {
-  starsOn = !starsOn;
-  setStarsEnabled(starsOn);
-  starsBtn.textContent = starsLabel(starsOn);
-});
-
-/* --- Phase 8 T3: footer audio (context unlock on PLAY only) --- */
-var audioBase = '';
-var midiPlayerApi = null;
-var midiLoadPromise = null;
-var trackSelect = document.getElementById('track-select');
-var viz = document.getElementById('viz');
-var playSpan = document.getElementById('dade-play-audio');
-var sfxSpan = document.getElementById('dade-sfx-toggle');
-
-for (var ti = 0; ti < tracks.length; ti++) {
-  var opt = document.createElement('option');
-  opt.value = tracks[ti].name;
-  opt.textContent = tracks[ti].name;
-  trackSelect.appendChild(opt);
-}
-
-function stopAllSynth() {
-  for (var si = 0; si < tracks.length; si++) tracks[si].stop();
-}
-
-function sfxRead() {
-  try {
-    return localStorage.getItem('sfx_enabled') === 'true';
-  } catch (e) {
-    return false;
-  }
-}
-
-function sfxRefreshLabel() {
-  sfxSpan.textContent = '[ SFX: ' + (sfxRead() ? 'ON' : 'OFF') + ' ]';
-}
-
-sfxRefreshLabel();
-
-sfxSpan.addEventListener('click', function () {
-  try {
-    localStorage.setItem('sfx_enabled', sfxRead() ? 'false' : 'true');
-  } catch (e) {}
-  sfxRefreshLabel();
-});
-
-playSpan.addEventListener('click', function () {
-  if (!midiLoadPromise) {
-    midiLoadPromise = initMidiPlayer({ midiUrl: audioBase + 'sounds/midi.mid', canvas: viz });
-  }
-  midiLoadPromise
-    .then(function (api) {
-      midiPlayerApi = api;
-      var ctx = globalThis.__dadeAudioCtx;
-      return ctx.resume().then(function () {
-        stopAllSynth();
-        api.stopMidi();
-        api.setMidiAudible(false, 0.03);
-        api.startVisualizer();
-        var sel = trackSelect.value;
-        if (sel === 'midi') {
-          api.setMidiAudible(true, 0.03);
-          api.startMidi();
-        } else {
-          for (var pj = 0; pj < tracks.length; pj++) {
-            if (tracks[pj].name === sel) {
-              tracks[pj].play();
-              break;
-            }
-          }
-        }
-        globalThis.__dadeAudioUnlocked = true;
+<script>
+(function(){
+  var btns = document.querySelectorAll('.seg-btn');
+  var lists = { friends: 'seg-friends', cool: 'seg-cool', updates: 'seg-updates' };
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      btns.forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      Object.keys(lists).forEach(function(k){
+        var el = document.getElementById(lists[k]);
+        if (el) el.hidden = (k !== b.dataset.seg);
       });
-    })
-    .catch(function (e) {
-      console.error(e);
     });
-});
-
-trackSelect.addEventListener('change', function () {
-  if (!midiPlayerApi || !globalThis.__dadeAudioUnlocked) return;
-  midiPlayerApi.stopMidi();
-  midiPlayerApi.setMidiAudible(false, 0.03);
-  stopAllSynth();
-  var name = trackSelect.value;
-  if (name === 'midi') {
-    midiPlayerApi.setMidiAudible(true, 0.03);
-    midiPlayerApi.startMidi();
-  } else {
-    for (var sj = 0; sj < tracks.length; sj++) {
-      if (tracks[sj].name === name) {
-        tracks[sj].play();
-        break;
-      }
-    }
-  }
-});
-
-initSFX();
+  });
+})();
 </script>
+<script src="script.js" defer></script>
 <script type="module">
 import { initKonami } from './interactive/konami.js';
 import { initEasterEggs } from './interactive/easter-eggs.js';
