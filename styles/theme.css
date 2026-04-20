@@ -1600,6 +1600,18 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   top: 0;
   width: 275px;
   height: 20px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-pl .pl-titlebar > .pl-tb-corner,
+#winamp-pl .pl-titlebar > .pl-tb-fill,
+#winamp-pl .pl-titlebar > .pl-tb-title-mid {
+  display: none;
 }
 #winamp-pl .pl-tb-corner {
   position: absolute;
@@ -1704,6 +1716,9 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   overflow: hidden;
 }
 #winamp-pl.shaded .pl-titlebar { height: 14px; }
+#winamp-pl.shaded .pl-titlebar {
+  background-image: none;
+}
 #winamp-pl.shaded .pl-titlebar > :not(.pl-titlebar-shade):not(.pl-shade-title) {
   display: none !important;
 }
@@ -1747,6 +1762,13 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   top: 194px;
   width: 275px;
   height: 38px;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-position: 0 -72px;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
 }
 #winamp-pl .pl-bottom-l,
 #winamp-pl .pl-bottom-r {
@@ -1759,6 +1781,10 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   background-size: 280px 186px;
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
+}
+#winamp-pl .pl-bottom > .pl-bottom-l,
+#winamp-pl .pl-bottom > .pl-bottom-r {
+  display: none;
 }
 #winamp-pl .pl-bottom-l { left:   0; width: 125px; background-position:    0  -72px; }
 #winamp-pl .pl-bottom-r { left: 125px; width: 150px; background-position: -126px -72px; }
@@ -1894,6 +1920,7 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   line-height: 0;
   color: transparent;
   white-space: nowrap;
+  display: none;
 }
 #winamp-pl .pl-track-count {
   position: absolute;
@@ -1904,4 +1931,5 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   line-height: 0;
   color: transparent;
   white-space: nowrap;
+  display: none;
 }

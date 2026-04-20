@@ -1189,32 +1189,30 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
 })();
 
 (function windowShadeInit() {
-  var LS = {
-    main: 'wa_shade_main',
-    eq: 'wa_shade_eq',
-    pl: 'wa_shade_pl'
-  };
   var roots = {
     main: document.getElementById('winamp-chrome'),
     eq: document.getElementById('winamp-eq'),
     pl: document.getElementById('winamp-pl')
   };
 
-  function readState(key) {
-    try { return localStorage.getItem(key) === '1'; } catch (e) { return false; }
-  }
-  function writeState(key, on) {
-    try { localStorage.setItem(key, on ? '1' : '0'); } catch (e) {}
-  }
-  function setShade(root, key, on) {
+  function setShade(root, on) {
     if (!root) return;
     root.classList.toggle('shaded', !!on);
-    writeState(key, !!on);
   }
-
-  setShade(roots.main, LS.main, readState(LS.main));
-  setShade(roots.eq, LS.eq, readState(LS.eq));
-  setShade(roots.pl, LS.pl, readState(LS.pl));
+  function hydrateShadeState() {
+    var mainShaded = false;
+    var eqShaded = false;
+    var plShaded = false;
+    try {
+      mainShaded = localStorage.getItem('wa_shade_main') === '1';
+      eqShaded = localStorage.getItem('wa_shade_eq') === '1';
+      plShaded = localStorage.getItem('wa_shade_pl') === '1';
+    } catch (e) {}
+    setShade(roots.main, mainShaded);
+    setShade(roots.eq, eqShaded);
+    setShade(roots.pl, plShaded);
+  }
+  hydrateShadeState();
 
   var mainShadeBtn = roots.main && roots.main.querySelector('.wa-titlebar .wa-shade');
   var eqShadeBtn = roots.eq && roots.eq.querySelector('.eq-titlebar-shade');
@@ -1222,17 +1220,24 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
 
   if (mainShadeBtn) {
     mainShadeBtn.addEventListener('click', function () {
-      setShade(roots.main, LS.main, !roots.main.classList.contains('shaded'));
+      var on = !roots.main.classList.contains('shaded');
+      setShade(roots.main, on);
+      try { localStorage.setItem('wa_shade_main', on ? '1' : '0'); } catch (e) {}
     });
   }
   if (eqShadeBtn) {
     eqShadeBtn.addEventListener('click', function () {
-      setShade(roots.eq, LS.eq, !roots.eq.classList.contains('shaded'));
+      var on = !roots.eq.classList.contains('shaded');
+      setShade(roots.eq, on);
+      try { localStorage.setItem('wa_shade_eq', on ? '1' : '0'); } catch (e) {}
     });
   }
   if (plShadeBtn) {
     plShadeBtn.addEventListener('click', function () {
-      setShade(roots.pl, LS.pl, !roots.pl.classList.contains('shaded'));
+      var on = !roots.pl.classList.contains('shaded');
+      setShade(roots.pl, on);
+      try { localStorage.setItem('wa_shade_pl', on ? '1' : '0'); } catch (e) {}
+      syncPlShadeTitle();
     });
   }
 
@@ -1256,7 +1261,15 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
   if (eqOnBtn) eqOnBtn.addEventListener('click', function () { setTimeout(syncEqShadeGlyphs, 0); });
 
   var plShadeTitle = roots.pl && roots.pl.querySelector('.pl-shade-title');
-  render(plShadeTitle, 'PLAYLIST');
+  function syncPlShadeTitle() {
+    if (!plShadeTitle) return;
+    if (roots.pl && roots.pl.classList.contains('shaded')) {
+      render(plShadeTitle, 'PLAYLIST');
+    } else {
+      plShadeTitle.replaceChildren();
+    }
+  }
+  syncPlShadeTitle();
 
   var shadeTrackText = roots.main && roots.main.querySelector('.wa-shade-track-text');
   var shadeTrackWrap = roots.main && roots.main.querySelector('.wa-shade-track');
