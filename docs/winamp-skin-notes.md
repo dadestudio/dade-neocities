@@ -594,6 +594,53 @@ strip area between the bolt's right edge and the minimize button —
 left = 16, top = 3, width = 224, height = 9 inside `#winamp-chrome` —
 marked with `cursor: move` only; no drag wiring this run.
 
+## Window shade offsets (Step 6)
+
+Canonical shade-mode coordinates used by this repo. Main-window shaded
+art and mini controls are sourced from `titlebar.png` (`344 × 87`).
+EQ and playlist shaded strips live in `eq_ex.png` / `pledit.png`
+(Winamp's stock sheet layout), but are listed here for one-stop shade
+lookup.
+
+### Main shade strip + mini controls (`titlebar.png`)
+
+| Sprite                                | sx  | sy  | w   | h  | Notes |
+| ------------------------------------- | --- | --- | --- | -- | ----- |
+| Main shaded strip (selected/active)   | 27  | 29  | 275 | 14 | `#winamp-chrome.shaded` base strip |
+| Main shaded strip (inactive)          | 27  | 42  | 275 | 14 | future blur/focus swap |
+| Shade button selected                 | 0   | 27  | 9   | 9  | shown while window is shaded |
+| Shade button selected + pressed       | 9   | 27  | 9   | 9  | active click frame |
+| Mini prev button                      | 196 | 29  | 7   | 10 | draw at `(169, 2)` in shaded window |
+| Mini play button                      | 203 | 29  | 10  | 10 | draw at `(176, 2)` |
+| Mini pause button                     | 213 | 29  | 9   | 10 | draw at `(186, 2)` |
+| Mini stop button                      | 222 | 29  | 9   | 10 | draw at `(195, 2)` |
+| Mini next button                      | 231 | 29  | 10  | 10 | draw at `(204, 2)` |
+| Mini viz well region                  | 106 | 34  | 38  | 5  | draw at `(79, 5)` |
+
+### EQ shade strip + glyph anchors
+
+Source sheet: `eq_ex.png` (`275 × 82`).
+
+| Sprite                              | sx | sy | w   | h  | Notes |
+| ----------------------------------- | -- | -- | --- | -- | ----- |
+| EQ shaded strip selected            | 0  | 0  | 275 | 14 | `#winamp-eq.shaded` base strip |
+| EQ shaded strip inactive            | 0  | 15 | 275 | 14 | optional focus swap |
+| EQ maximize glyph (shaded->full)    | 1  | 38 | 9   | 9  | shade button in shaded mode |
+| EQ minimize glyph (full->shaded)    | 1  | 47 | 9   | 9  | shade button in full mode |
+| EQ shaded close glyph               | 11 | 38 | 9   | 9  | existing close slot |
+
+### Playlist shade strip + title row
+
+Source sheet: `pledit.png` (`280 × 186`).
+
+| Sprite                                   | sx  | sy | w  | h  | Notes |
+| ---------------------------------------- | --- | -- | -- | -- | ----- |
+| Playlist shade background tile           | 72  | 57 | 25 | 14 | body tile used across strip |
+| Playlist shade background left cap       | 72  | 42 | 25 | 14 | left edge |
+| Playlist shade background right selected | 99  | 42 | 50 | 14 | right edge (active) |
+| Playlist collapse glyph (full->shaded)   | 62  | 42 | 9  | 9  | titlebar shade button |
+| Playlist expand glyph (shaded->full)     | 150 | 42 | 9  | 9  | titlebar shade button when shaded |
+
 ## Playlist window — base 2.91
 
 The playlist window (`#winamp-pl`) renders as a 275 × 232 sprite-backed

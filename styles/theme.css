@@ -179,6 +179,17 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   line-height: 1;
   user-select: none;
 }
+#winamp-chrome.shaded {
+  height: 14px;
+  background-image: url("../images/winamp-skin/base-2.91/titlebar.png");
+  background-repeat: no-repeat;
+  background-position: -27px -29px;
+  background-size: 344px 87px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-chrome.shaded > :not(.wa-titlebar) { display: none !important; }
+#winamp-chrome.shaded .wa-titlebar { background-image: none; }
 
 /* Title bar — the bitmap art in main.png paints the gradient, bolt and
    "WINAMP" wordmark. The .wa-titlebar element stays as a clickable spacer
@@ -976,6 +987,17 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   font-size: 0;
   line-height: 0;
 }
+#winamp-eq.shaded {
+  height: 14px;
+  background-image: url("../images/winamp-skin/base-2.91/eq_ex.png");
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 275px 82px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-eq.shaded > :not(.eq-titlebar) { display: none !important; }
+#winamp-eq.shaded .eq-titlebar { background-image: none; }
 #winamp-eq[hidden] { display: none; }
 
 /* Hide every chunk of the existing EQ markup whose look is already
@@ -1197,6 +1219,38 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   overflow: hidden;
 }
 #winamp-eq .eq-titlebar-close:active { background-position: 0 -125px; }
+#winamp-eq .eq-titlebar-shade {
+  position: absolute;
+  left: 254px;
+  top: 3px;
+  width: 9px;
+  height: 9px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/eq_ex.png");
+  background-repeat: no-repeat;
+  background-position: -1px -47px;
+  background-size: 275px 82px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  cursor: pointer;
+}
+#winamp-eq.shaded .eq-titlebar-shade { background-position: -1px -38px; }
+#winamp-eq .eq-shade-ui {
+  display: none;
+  position: absolute;
+  left: 14px;
+  top: 4px;
+  height: 6px;
+  gap: 8px;
+  pointer-events: none;
+}
+#winamp-eq.shaded .eq-shade-ui {
+  display: flex;
+  align-items: center;
+}
 
 /* ON / AUTO / PRESETS sprite-state buttons. Specificity beats the
    #winamp-eq base background-image inheritance because each rule sets
@@ -1242,7 +1296,8 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
 #winamp-eq .eq-on:focus-visible,
 #winamp-eq .eq-auto:focus-visible,
 #winamp-eq .eq-presets-btn:focus-visible,
-#winamp-eq .eq-titlebar-close:focus-visible {
+#winamp-eq .eq-titlebar-close:focus-visible,
+#winamp-eq .eq-titlebar-shade:focus-visible {
   outline: 1px dotted #FFCC33;
   outline-offset: 0;
 }
@@ -1416,11 +1471,75 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
 #winamp-chrome .wa-titlebar > .wa-min:active   { background-position:  -9px  -9px; }
 #winamp-chrome .wa-titlebar > .wa-shade:active { background-position:  -9px -18px; }
 #winamp-chrome .wa-titlebar > .wa-close:active { background-position: -18px  -9px; }
+#winamp-chrome.shaded .wa-titlebar > .wa-shade { background-position: 0 -27px; }
+#winamp-chrome.shaded .wa-titlebar > .wa-shade:active { background-position: -9px -27px; }
 #winamp-chrome .wa-titlebar > .wa-min:focus-visible,
 #winamp-chrome .wa-titlebar > .wa-shade:focus-visible,
 #winamp-chrome .wa-titlebar > .wa-close:focus-visible {
   outline: 1px dotted #FFCC33;
   outline-offset: 0;
+}
+#winamp-chrome .wa-titlebar > .wa-shade-ui {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 275px;
+  height: 14px;
+  pointer-events: none;
+}
+#winamp-chrome.shaded .wa-titlebar > .wa-shade-ui { display: block; }
+#winamp-chrome .wa-shade-track {
+  position: absolute;
+  left: 26px;
+  top: 4px;
+  width: 136px;
+  height: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+#winamp-chrome .wa-shade-track > span {
+  display: inline-block;
+  transform: translateX(0);
+  will-change: transform;
+}
+#winamp-chrome .wa-shade-mini {
+  position: absolute;
+  top: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/titlebar.png");
+  background-repeat: no-repeat;
+  background-size: 344px 87px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  cursor: pointer;
+  pointer-events: auto;
+}
+#winamp-chrome .wa-shade-mini[data-act="prev"]  { left: 169px; width: 7px;  height: 10px; background-position: -196px -29px; }
+#winamp-chrome .wa-shade-mini[data-act="play"]  { left: 176px; width: 10px; height: 10px; background-position: -203px -29px; }
+#winamp-chrome .wa-shade-mini[data-act="pause"] { left: 186px; width: 9px;  height: 10px; background-position: -213px -29px; }
+#winamp-chrome .wa-shade-mini[data-act="stop"]  { left: 195px; width: 9px;  height: 10px; background-position: -222px -29px; }
+#winamp-chrome .wa-shade-mini[data-act="next"]  { left: 204px; width: 10px; height: 10px; background-position: -231px -29px; }
+#winamp-chrome .wa-shade-mini[data-act="prev"]:active  { background-position: -196px -42px; }
+#winamp-chrome .wa-shade-mini[data-act="play"]:active  { background-position: -203px -42px; }
+#winamp-chrome .wa-shade-mini[data-act="pause"]:active { background-position: -213px -42px; }
+#winamp-chrome .wa-shade-mini[data-act="stop"]:active  { background-position: -222px -42px; }
+#winamp-chrome .wa-shade-mini[data-act="next"]:active  { background-position: -231px -42px; }
+#winamp-chrome .wa-shade-viz {
+  position: absolute;
+  left: 79px;
+  top: 5px;
+  width: 38px;
+  height: 5px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
 }
 
 /* ----------------------------------------------------------------------
@@ -1457,6 +1576,16 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   image-rendering: -moz-crisp-edges;
   user-select: none;
 }
+#winamp-pl.shaded {
+  height: 14px;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: repeat-x;
+  background-position: -72px -57px;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+#winamp-pl.shaded > :not(.pl-titlebar) { display: none !important; }
 #winamp-pl[hidden] { display: none; }
 
 /* Titlebar — 275×20 painted from PLEDIT active sprites:
@@ -1546,6 +1675,39 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   cursor: pointer;
   overflow: hidden;
 }
+#winamp-pl .pl-titlebar-shade {
+  position: absolute;
+  right: 13px;
+  top: 3px;
+  width: 9px;
+  height: 9px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: url("../images/winamp-skin/base-2.91/pledit.png");
+  background-repeat: no-repeat;
+  background-position: -62px -42px;
+  background-size: 280px 186px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  cursor: pointer;
+}
+#winamp-pl.shaded .pl-titlebar-shade { background-position: -150px -42px; }
+#winamp-pl .pl-shade-title {
+  display: none;
+  position: absolute;
+  left: 95px;
+  top: 4px;
+  width: 90px;
+  height: 6px;
+  overflow: hidden;
+}
+#winamp-pl.shaded .pl-titlebar { height: 14px; }
+#winamp-pl.shaded .pl-titlebar > :not(.pl-titlebar-shade):not(.pl-shade-title) {
+  display: none !important;
+}
+#winamp-pl.shaded .pl-shade-title { display: block; }
 
 /* Side strips — middle area y=20..194 (174 tall). Left=12 wide tile
    (PLAYLIST_LEFT_TILE  0, 42, 12, 29); right=20 wide tile
@@ -1712,6 +1874,7 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
 #winamp-pl .pl-repeat[aria-pressed="true"]:active   { background-position:    0  -45px; }
 
 #winamp-pl .pl-titlebar-close:focus-visible,
+#winamp-pl .pl-titlebar-shade:focus-visible,
 #winamp-pl .pl-shuffle:focus-visible,
 #winamp-pl .pl-repeat:focus-visible {
   outline: 1px dotted #FFCC33;

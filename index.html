@@ -110,6 +110,15 @@ img {
               <button type="button" class="wa-min" aria-label="Minimize"></button>
               <button type="button" class="wa-shade" aria-label="Windowshade"></button>
               <button type="button" class="wa-close" aria-label="Close"></button>
+              <span class="wa-shade-ui" aria-hidden="true">
+                <span class="wa-shade-track"><span class="wa-shade-track-text"></span></span>
+                <button type="button" class="wa-shade-mini" data-act="prev" aria-label="previous"></button>
+                <button type="button" class="wa-shade-mini" data-act="play" aria-label="play"></button>
+                <button type="button" class="wa-shade-mini" data-act="pause" aria-label="pause"></button>
+                <button type="button" class="wa-shade-mini" data-act="stop" aria-label="stop"></button>
+                <button type="button" class="wa-shade-mini" data-act="next" aria-label="next"></button>
+                <canvas class="wa-shade-viz" width="38" height="5" aria-hidden="true"></canvas>
+              </span>
             </div>
             <span class="wa-clutter-vbar" aria-hidden="true">
               <span class="wa-clutter-vbtn" data-clutter="o" tabindex="-1"></span>
@@ -140,7 +149,12 @@ img {
           </div>
           <div id="winamp-eq">
             <div class="eq-titlebar" aria-hidden="true">
+              <button type="button" class="eq-titlebar-shade" aria-label="windowshade eq"></button>
               <button type="button" class="eq-titlebar-close" aria-label="close eq" tabindex="-1"></button>
+              <span class="eq-shade-ui" aria-hidden="true">
+                <span class="eq-shade-on"></span>
+                <span class="eq-shade-presets"></span>
+              </span>
             </div>
             <button type="button" class="eq-on" aria-pressed="true" aria-label="EQ on/off"></button>
             <button type="button" class="eq-auto" aria-pressed="false" aria-label="EQ auto"></button>
@@ -199,7 +213,9 @@ img {
               <span class="pl-tb-title-mid"></span>
               <span class="pl-tb-fill" data-side="r"><i></i><i></i><i></i></span>
               <span class="pl-tb-corner pl-tb-corner-r"></span>
+              <button type="button" class="pl-titlebar-shade" aria-label="windowshade playlist"></button>
               <button type="button" class="pl-titlebar-close" aria-label="close playlist" tabindex="-1"></button>
+              <span class="pl-shade-title" aria-hidden="true"></span>
             </div>
             <span class="pl-side pl-side-l" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
             <span class="pl-side pl-side-r" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
@@ -1170,6 +1186,166 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
   requestAnimationFrame(tickTime);
 
   buildRows();
+})();
+
+(function windowShadeInit() {
+  var LS = {
+    main: 'wa_shade_main',
+    eq: 'wa_shade_eq',
+    pl: 'wa_shade_pl'
+  };
+  var roots = {
+    main: document.getElementById('winamp-chrome'),
+    eq: document.getElementById('winamp-eq'),
+    pl: document.getElementById('winamp-pl')
+  };
+
+  function readState(key) {
+    try { return localStorage.getItem(key) === '1'; } catch (e) { return false; }
+  }
+  function writeState(key, on) {
+    try { localStorage.setItem(key, on ? '1' : '0'); } catch (e) {}
+  }
+  function setShade(root, key, on) {
+    if (!root) return;
+    root.classList.toggle('shaded', !!on);
+    writeState(key, !!on);
+  }
+
+  setShade(roots.main, LS.main, readState(LS.main));
+  setShade(roots.eq, LS.eq, readState(LS.eq));
+  setShade(roots.pl, LS.pl, readState(LS.pl));
+
+  var mainShadeBtn = roots.main && roots.main.querySelector('.wa-titlebar .wa-shade');
+  var eqShadeBtn = roots.eq && roots.eq.querySelector('.eq-titlebar-shade');
+  var plShadeBtn = roots.pl && roots.pl.querySelector('.pl-titlebar-shade');
+
+  if (mainShadeBtn) {
+    mainShadeBtn.addEventListener('click', function () {
+      setShade(roots.main, LS.main, !roots.main.classList.contains('shaded'));
+    });
+  }
+  if (eqShadeBtn) {
+    eqShadeBtn.addEventListener('click', function () {
+      setShade(roots.eq, LS.eq, !roots.eq.classList.contains('shaded'));
+    });
+  }
+  if (plShadeBtn) {
+    plShadeBtn.addEventListener('click', function () {
+      setShade(roots.pl, LS.pl, !roots.pl.classList.contains('shaded'));
+    });
+  }
+
+  function render(el, text) {
+    if (!el) return;
+    var fn = window.__waRenderText;
+    if (typeof fn === 'function') fn(el, text);
+    else el.textContent = text;
+  }
+
+  var eqShadeOn = roots.eq && roots.eq.querySelector('.eq-shade-on');
+  var eqShadePresets = roots.eq && roots.eq.querySelector('.eq-shade-presets');
+  var eqOnBtn = roots.eq && roots.eq.querySelector('.eq-on');
+  function syncEqShadeGlyphs() {
+    if (!eqShadeOn || !eqShadePresets) return;
+    var isOn = eqOnBtn && eqOnBtn.getAttribute('aria-pressed') === 'true';
+    render(eqShadeOn, isOn ? 'ON' : 'OFF');
+    render(eqShadePresets, 'PRE');
+  }
+  syncEqShadeGlyphs();
+  if (eqOnBtn) eqOnBtn.addEventListener('click', function () { setTimeout(syncEqShadeGlyphs, 0); });
+
+  var plShadeTitle = roots.pl && roots.pl.querySelector('.pl-shade-title');
+  render(plShadeTitle, 'PLAYLIST');
+
+  var shadeTrackText = roots.main && roots.main.querySelector('.wa-shade-track-text');
+  var shadeTrackWrap = roots.main && roots.main.querySelector('.wa-shade-track');
+  var shadeMiniViz = roots.main && roots.main.querySelector('.wa-shade-viz');
+  var shadeMiniBtns = roots.main ? roots.main.querySelectorAll('.wa-shade-mini[data-act]') : [];
+
+  Array.prototype.forEach.call(shadeMiniBtns, function (btn) {
+    btn.addEventListener('click', function () {
+      var act = btn.getAttribute('data-act');
+      if (!act) return;
+      var target = document.querySelector('#audio-player-mount [data-act="' + act + '"]');
+      if (target) target.click();
+    });
+  });
+
+  function getCurrentTrackIndex() {
+    var p = window.__dadePlayer;
+    if (p && typeof p.getTrackIndex === 'function') {
+      var idx = p.getTrackIndex();
+      if (typeof idx === 'number' && idx >= 0 && idx < TRACKS.length) return idx;
+    }
+    if (p && typeof p.trackIndex === 'number' && p.trackIndex >= 0 && p.trackIndex < TRACKS.length) {
+      return p.trackIndex;
+    }
+    var audio = document.querySelector('#audio-player-mount audio');
+    if (!audio || !audio.currentSrc) return 0;
+    for (var i = 0; i < TRACKS.length; i++) {
+      if (audio.currentSrc.indexOf(TRACKS[i].src) !== -1) return i;
+    }
+    return 0;
+  }
+
+  var marqueeX = 0;
+  var lastTrackLabel = '';
+  function tickShadeTitle(dt) {
+    if (!roots.main || !roots.main.classList.contains('shaded') || !shadeTrackText || !shadeTrackWrap) return;
+    var idx = getCurrentTrackIndex();
+    var tr = TRACKS[idx] || TRACKS[0];
+    var label = ((tr && tr.artist) ? (tr.artist + ' - ') : '') + ((tr && tr.title) ? tr.title : 'NO TRACK');
+    if (label !== lastTrackLabel) {
+      lastTrackLabel = label;
+      render(shadeTrackText, label);
+      marqueeX = 0;
+      shadeTrackText.style.transform = 'translateX(0px)';
+    }
+    var contentW = shadeTrackText.scrollWidth || 0;
+    var slotW = shadeTrackWrap.clientWidth || 136;
+    if (contentW <= slotW) return;
+    marqueeX -= (dt / 1000) * 24;
+    if (-marqueeX > contentW + 16) marqueeX = slotW;
+    shadeTrackText.style.transform = 'translateX(' + marqueeX + 'px)';
+  }
+
+  var miniCtx = shadeMiniViz ? shadeMiniViz.getContext('2d') : null;
+  var miniFreq = null;
+  function tickShadeViz() {
+    if (!miniCtx || !shadeMiniViz) return;
+    miniCtx.fillStyle = 'rgb(0,0,0)';
+    miniCtx.fillRect(0, 0, 38, 5);
+    if (!roots.main || !roots.main.classList.contains('shaded')) return;
+    var analyser = globalThis.__dadeAudioAnalyser;
+    if (!analyser) return;
+    var binCount = analyser.frequencyBinCount;
+    if (!miniFreq || miniFreq.length !== binCount) miniFreq = new Uint8Array(binCount);
+    analyser.getByteFrequencyData(miniFreq);
+    for (var x = 0; x < 38; x++) {
+      var i0 = Math.floor((x / 38) * binCount);
+      var i1 = Math.max(i0 + 1, Math.floor(((x + 1) / 38) * binCount));
+      var sum = 0;
+      var n = 0;
+      for (var i = i0; i < i1; i++) { sum += miniFreq[i]; n += 1; }
+      var v = n > 0 ? (sum / n) : 0;
+      var h = Math.round((v / 255) * 5);
+      if (h < 1) continue;
+      miniCtx.fillStyle = 'rgb(57,181,16)';
+      miniCtx.fillRect(x, 5 - h, 1, h);
+    }
+  }
+
+  var lastTs = 0;
+  function frame(ts) {
+    if (!lastTs) lastTs = ts;
+    var dt = ts - lastTs;
+    lastTs = ts;
+    tickShadeTitle(dt);
+    tickShadeViz();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 })();
 
 window.__dadeOnTrackEnd = function (curIdx, defaultNext, total) {
