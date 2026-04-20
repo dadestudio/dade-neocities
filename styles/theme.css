@@ -1237,6 +1237,15 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   image-rendering: -moz-crisp-edges;
   cursor: pointer;
 }
+#winamp-eq .eq-titlebar-shade::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -1px;
+  bottom: -5px;
+  left: -5px;
+  background: transparent;
+}
 #winamp-eq.shaded .eq-titlebar-shade { background-position: -1px -38px; }
 #winamp-eq .eq-shade-ui {
   display: none;
@@ -1468,6 +1477,15 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
 #winamp-chrome .wa-titlebar > .wa-min   { left: 244px; background-position:  -9px   0; }
 #winamp-chrome .wa-titlebar > .wa-shade { left: 254px; background-position:   0  -18px; }
 #winamp-chrome .wa-titlebar > .wa-close { left: 264px; background-position: -18px   0; }
+#winamp-chrome .wa-titlebar > .wa-shade::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -1px;
+  bottom: -5px;
+  left: -1px;
+  background: transparent;
+}
 #winamp-chrome .wa-titlebar > .wa-min:active   { background-position:  -9px  -9px; }
 #winamp-chrome .wa-titlebar > .wa-shade:active { background-position:  -9px -18px; }
 #winamp-chrome .wa-titlebar > .wa-close:active { background-position: -18px  -9px; }
@@ -1704,6 +1722,15 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   cursor: pointer;
+}
+#winamp-pl .pl-titlebar-shade::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -1px;
+  bottom: -5px;
+  left: -5px;
+  background: transparent;
 }
 #winamp-pl.shaded .pl-titlebar-shade { background-position: -150px -42px; }
 #winamp-pl .pl-shade-title {
