@@ -304,13 +304,28 @@ img {
     if (!el) return;
     el.addEventListener('click', function(){
       var on = el.getAttribute('aria-pressed') === 'true';
+      var nextOn = !on;
       el.setAttribute('aria-pressed', on ? 'false' : 'true');
       if (id === 'wa-eq') {
         var panel = document.getElementById('winamp-eq');
         if (panel) panel.hidden = on; // when previously on, hide; when off, show
+        try { localStorage.setItem('wa_eq_open', nextOn ? '1' : '0'); } catch (e) {}
+      } else if (id === 'wa-pl') {
+        try { localStorage.setItem('wa_pl_open', nextOn ? '1' : '0'); } catch (e) {}
       }
     });
   });
+
+  var eqCloseBtn = document.querySelector('#winamp-eq .eq-titlebar-close');
+  if (eqCloseBtn) {
+    eqCloseBtn.addEventListener('click', function () {
+      var panel = document.getElementById('winamp-eq');
+      if (panel) panel.hidden = true;
+      var eqBtn = document.getElementById('wa-eq');
+      if (eqBtn) eqBtn.setAttribute('aria-pressed', 'false');
+      try { localStorage.setItem('wa_eq_open', '0'); } catch (e) {}
+    });
+  }
 })();
 </script>
 <script src="script.js" defer></script>
@@ -1128,6 +1143,7 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
     pl.hidden = true;
     var plBtn = document.getElementById('wa-pl');
     if (plBtn) plBtn.setAttribute('aria-pressed', 'false');
+    try { localStorage.setItem('wa_pl_open', '0'); } catch (e) {}
   });
 
   // Sync visibility with the existing wa-pl clutter button (the earlier
@@ -1222,21 +1238,21 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
     mainShadeBtn.addEventListener('click', function () {
       var on = !roots.main.classList.contains('shaded');
       setShade(roots.main, on);
-      try { localStorage.setItem('wa_shade_main', on ? '1' : '0'); } catch (e) {}
+      try { console.log('shade_write', 'main', on); localStorage.setItem('wa_shade_main', on ? '1' : '0'); } catch (e) {}
     });
   }
   if (eqShadeBtn) {
     eqShadeBtn.addEventListener('click', function () {
       var on = !roots.eq.classList.contains('shaded');
       setShade(roots.eq, on);
-      try { localStorage.setItem('wa_shade_eq', on ? '1' : '0'); } catch (e) {}
+      try { console.log('shade_write', 'eq', on); localStorage.setItem('wa_shade_eq', on ? '1' : '0'); } catch (e) {}
     });
   }
   if (plShadeBtn) {
     plShadeBtn.addEventListener('click', function () {
       var on = !roots.pl.classList.contains('shaded');
       setShade(roots.pl, on);
-      try { localStorage.setItem('wa_shade_pl', on ? '1' : '0'); } catch (e) {}
+      try { console.log('shade_write', 'pl', on); localStorage.setItem('wa_shade_pl', on ? '1' : '0'); } catch (e) {}
       syncPlShadeTitle();
     });
   }
@@ -1585,6 +1601,28 @@ initKonami({ onUnlock: function () {} });
   });
 
   start();
+})();
+
+// Persisted EQ/playlist visibility hydration. Missing keys intentionally no-op
+// so fresh profiles keep defaults (EQ visible, playlist hidden).
+(function windowVisibilityHydrate() {
+  var eq = document.getElementById('winamp-eq');
+  var pl = document.getElementById('winamp-pl');
+  var eqBtn = document.getElementById('wa-eq');
+  var plBtn = document.getElementById('wa-pl');
+  try {
+    var plOpen = localStorage.getItem('wa_pl_open');
+    if (plOpen === '1' && pl) {
+      pl.removeAttribute('hidden');
+      if (plBtn) plBtn.setAttribute('aria-pressed', 'true');
+    }
+
+    var eqOpen = localStorage.getItem('wa_eq_open');
+    if (eqOpen === '0' && eq) {
+      eq.hidden = true;
+      if (eqBtn) eqBtn.setAttribute('aria-pressed', 'false');
+    }
+  } catch (e) {}
 })();
 </script>
 </body>
