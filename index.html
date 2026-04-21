@@ -1238,21 +1238,18 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
     mainShadeBtn.addEventListener('click', function () {
       var on = !roots.main.classList.contains('shaded');
       setShade(roots.main, on);
-      try { console.log('shade_write', 'main', on); localStorage.setItem('wa_shade_main', on ? '1' : '0'); } catch (e) {}
     });
   }
   if (eqShadeBtn) {
     eqShadeBtn.addEventListener('click', function () {
       var on = !roots.eq.classList.contains('shaded');
       setShade(roots.eq, on);
-      try { console.log('shade_write', 'eq', on); localStorage.setItem('wa_shade_eq', on ? '1' : '0'); } catch (e) {}
     });
   }
   if (plShadeBtn) {
     plShadeBtn.addEventListener('click', function () {
       var on = !roots.pl.classList.contains('shaded');
       setShade(roots.pl, on);
-      try { console.log('shade_write', 'pl', on); localStorage.setItem('wa_shade_pl', on ? '1' : '0'); } catch (e) {}
       syncPlShadeTitle();
     });
   }
