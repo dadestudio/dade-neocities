@@ -1374,6 +1374,245 @@ if (dadePlayer) window.__dadePlayer = dadePlayer;
   requestAnimationFrame(frame);
 })();
 
+// Drag-to-move for the three Winamp windows — runs AFTER windowShadeInit
+// so shade state is already hydrated (rects we read via
+// getBoundingClientRect respect the live .shaded height differences).
+// The three roots are reparented into a #winamp-root <body> child so
+// their position: fixed (defined in styles/theme.css) is viewport-
+// relative and no ancestor transform / overflow can trap the drag. We
+// intentionally never touch audio/*, the viz canvas, the EQ faders, the
+// playlist list, or any shade-mode state; this IIFE is additive.
+//
+// Pointer events (not mouse) are used so touch drags work. Capture is
+// taken on the window ROOT (not the inner titlebar handle) so a
+// pointerup landing anywhere on screen still routes back to our
+// pointerup handler — the titlebar might be 14px tall but the cursor
+// during a drag can wander arbitrarily, and without root-level capture
+// the browser would hand the up event to whatever element is under the
+// cursor.
+//
+// Snap math: 10px threshold on each axis, evaluated independently. A
+// window-to-window snap only fires when the two rects overlap on the
+// OTHER axis (X snap requires Y overlap, Y snap requires X overlap),
+// so two stacked windows don't "magnet" across the viewport. Viewport
+// snaps ignore the overlap rule. Holding Shift during pointermove
+// bypasses all snap candidates for that frame.
+(function windowDragInit() {
+  var roots = {
+    main: document.getElementById('winamp-chrome'),
+    eq:   document.getElementById('winamp-eq'),
+    pl:   document.getElementById('winamp-pl')
+  };
+  if (!roots.main && !roots.eq && !roots.pl) return;
+
+  // Reparent into #winamp-root so position: fixed is viewport-relative
+  // and the three windows aren't trapped inside #winamp-stack's grid
+  // cell. Idempotent — if #winamp-root already exists, reuse it.
+  var body = document.body;
+  var waRoot = document.getElementById('winamp-root');
+  if (!waRoot) {
+    waRoot = document.createElement('div');
+    waRoot.id = 'winamp-root';
+    body.appendChild(waRoot);
+  }
+  ['main', 'eq', 'pl'].forEach(function (k) {
+    var el = roots[k];
+    if (el && el.parentElement !== waRoot) waRoot.appendChild(el);
+  });
+
+  var SNAP = 10;
+  var EDGE = 24;
+
+  function clampToViewport(x, y, rect) {
+    var W = window.innerWidth, H = window.innerHeight;
+    var w = rect.width || 0, h = rect.height || 0;
+    if (x < EDGE - w) x = EDGE - w;
+    if (x > W - EDGE) x = W - EDGE;
+    if (y < 0) y = 0;
+    if (y > H - EDGE) y = H - EDGE;
+    return { x: x, y: y };
+  }
+
+  function gatherOtherRects(draggedEl) {
+    var out = [];
+    ['main', 'eq', 'pl'].forEach(function (k) {
+      var el = roots[k];
+      if (!el || el === draggedEl) return;
+      if (el.hidden) return;
+      var cs;
+      try { cs = getComputedStyle(el); } catch (_) { cs = null; }
+      if (cs && cs.display === 'none') return;
+      out.push(el.getBoundingClientRect());
+    });
+    return out;
+  }
+
+  function computeSnap(x, y, rect, others) {
+    var W = window.innerWidth, H = window.innerHeight;
+    var w = rect.width, h = rect.height;
+    var dragL = x, dragT = y, dragR = x + w, dragB = y + h;
+    var bestDx = Infinity, bestX = x;
+    var bestDy = Infinity, bestY = y;
+
+    function tryX(candidate) {
+      var d = Math.abs(candidate - x);
+      if (d <= SNAP && d < bestDx) { bestDx = d; bestX = candidate; }
+    }
+    function tryY(candidate) {
+      var d = Math.abs(candidate - y);
+      if (d <= SNAP && d < bestDy) { bestDy = d; bestY = candidate; }
+    }
+
+    for (var i = 0; i < others.length; i++) {
+      var o = others[i];
+      var yOverlap = (dragT < o.bottom) && (dragB > o.top);
+      var xOverlap = (dragL < o.right) && (dragR > o.left);
+      if (yOverlap) {
+        tryX(o.left - w);   // dragged.right flush to other.left
+        tryX(o.right);      // dragged.left flush to other.right
+        tryX(o.left);       // align lefts
+        tryX(o.right - w);  // align rights
+      }
+      if (xOverlap) {
+        tryY(o.top - h);    // dragged.bottom flush to other.top
+        tryY(o.bottom);     // dragged.top flush to other.bottom
+        tryY(o.top);        // align tops
+        tryY(o.bottom - h); // align bottoms
+      }
+    }
+    tryX(0);
+    tryX(W - w);
+    tryY(0);
+    tryY(H - h);
+
+    return { x: bestX, y: bestY };
+  }
+
+  function defaultPosFor(key) {
+    var mr = roots.main ? roots.main.getBoundingClientRect() : { width: 275, height: 116 };
+    var mainW = mr.width || 275, mainH = mr.height || 116;
+    if (key === 'main') return { x: 16, y: 16 };
+    if (key === 'eq')   return { x: 16, y: 16 + mainH };
+    if (key === 'pl')   return { x: 16 + mainW, y: 16 };
+    return { x: 16, y: 16 };
+  }
+
+  function parsePos(raw) {
+    try {
+      if (!raw) return null;
+      var v = JSON.parse(raw);
+      if (v && isFinite(v.x) && isFinite(v.y)) return { x: +v.x, y: +v.y };
+    } catch (_) {}
+    return null;
+  }
+  function applyPos(el, pos) {
+    if (!el || !pos) return;
+    var rect = el.getBoundingClientRect();
+    var c = clampToViewport(pos.x, pos.y, rect);
+    el.style.left = c.x + 'px';
+    el.style.top  = c.y + 'px';
+  }
+
+  // Hydrate in main -> eq -> pl order so each default can key off main's
+  // live rect (which is already laid out by the time we read it). Each
+  // getItem call uses its literal key so the three persistence sites
+  // show up independently in source greps.
+  var mainSaved = null, eqSaved = null, plSaved = null;
+  try { mainSaved = parsePos(localStorage.getItem('wa_pos_main')); } catch (_) {}
+  try { eqSaved   = parsePos(localStorage.getItem('wa_pos_eq'));   } catch (_) {}
+  try { plSaved   = parsePos(localStorage.getItem('wa_pos_pl'));   } catch (_) {}
+  applyPos(roots.main, mainSaved || defaultPosFor('main'));
+  applyPos(roots.eq,   eqSaved   || defaultPosFor('eq'));
+  applyPos(roots.pl,   plSaved   || defaultPosFor('pl'));
+
+  var active = null;
+
+  function onMove(e) {
+    if (!active || e.pointerId !== active.pointerId) return;
+    var el = active.el;
+    var rect = el.getBoundingClientRect();
+    var x = e.clientX - active.offsetX;
+    var y = e.clientY - active.offsetY;
+    var c = clampToViewport(x, y, rect);
+    x = c.x; y = c.y;
+    if (!e.shiftKey) {
+      var s = computeSnap(x, y, rect, gatherOtherRects(el));
+      x = s.x; y = s.y;
+    }
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+  }
+  function teardown() {
+    if (!active) return;
+    var el = active.el;
+    el.removeEventListener('pointermove', onMove);
+    el.removeEventListener('pointerup', onUp);
+    el.removeEventListener('pointercancel', onCancel);
+    try { el.releasePointerCapture(active.pointerId); } catch (_) {}
+    active = null;
+  }
+  function onUp(e) {
+    if (!active || e.pointerId !== active.pointerId) return;
+    var el = active.el, key = active.key;
+    var rect = el.getBoundingClientRect();
+    var payload = JSON.stringify({ x: rect.left, y: rect.top });
+    // Explicit per-window setItem so each persistence site is visible
+    // to source grep; payload shape is identical across all three keys.
+    try {
+      if      (key === 'main') localStorage.setItem('wa_pos_main', payload);
+      else if (key === 'eq')   localStorage.setItem('wa_pos_eq',   payload);
+      else if (key === 'pl')   localStorage.setItem('wa_pos_pl',   payload);
+    } catch (_) {}
+    teardown();
+  }
+  function onCancel(e) {
+    if (!active || e.pointerId !== active.pointerId) return;
+    teardown();
+  }
+
+  // Skip-child selectors per window — clicks on these interactive glyphs
+  // must NOT initiate a drag (they own click handlers elsewhere).
+  var SKIP = {
+    main: '.wa-clutter, .wa-shade, .wa-close, .wa-minimize, .wa-min, .wa-shade-mini',
+    eq:   '.eq-titlebar-shade, .eq-titlebar-close',
+    pl:   '.pl-titlebar-close, .pl-titlebar-shade'
+  };
+
+  function bindDrag(key, handleSelector) {
+    var el = roots[key];
+    if (!el) return;
+    var handle = el.querySelector(handleSelector);
+    if (!handle) return;
+    handle.addEventListener('pointerdown', function (e) {
+      if (e.button !== undefined && e.button !== 0) return; // primary button only
+      if (active) return; // second-pointer lock
+      var t = e.target;
+      if (t && t.closest && t.closest(SKIP[key])) return;
+      var rect = el.getBoundingClientRect();
+      active = {
+        el: el,
+        key: key,
+        pointerId: e.pointerId,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top
+      };
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', onUp);
+      el.addEventListener('pointercancel', onCancel);
+      // Prevent text-selection / native drag image side-effects; do NOT
+      // stopPropagation so the existing titlebar glyph handlers (shade
+      // toggle etc.) keep receiving their own pointerdowns when the user
+      // clicks them directly.
+      e.preventDefault();
+    });
+  }
+
+  bindDrag('main', '.wa-titlebar');
+  bindDrag('eq',   '.eq-titlebar');
+  bindDrag('pl',   '.pl-titlebar');
+})();
+
 window.__dadeOnTrackEnd = function (curIdx, defaultNext, total) {
   try {
     const repeat  = localStorage.getItem('pl_repeat')  === 'true';

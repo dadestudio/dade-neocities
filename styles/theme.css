@@ -205,7 +205,7 @@ input[type=range].vol { width: 100%; margin-top: var(--space-2); accent-color: v
   padding: 0;
   background: transparent;
   border: 0;
-  cursor: default;
+  cursor: move;
 }
 #winamp-chrome .wa-titlebar > * { display: none; }
 
@@ -1959,4 +1959,31 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
   color: transparent;
   white-space: nowrap;
   display: none;
+}
+
+/* ----------------------------------------------------------------------
+   Draggable window roots — the three Winamp windows are reparented at
+   runtime into #winamp-root (a direct <body> child) and pinned via
+   position: fixed so their (x, y) is viewport-relative. Inline style
+   writes from the windowDragInit IIFE in index.html drive left/top;
+   z-index: 50 floats the stack above the starfield/CRT canvases (which
+   sit at z-index: 0/1). margin: 0 neutralises any residual stack-layout
+   margins that were in force while these windows lived inside
+   #winamp-stack. The drag handle is the full titlebar on each window;
+   child glyph buttons (shade/close/min) keep their own cursor: pointer
+   rules so only the bare titlebar region shows cursor: move.
+   ---------------------------------------------------------------------- */
+#winamp-root {
+  position: static;
+}
+#winamp-chrome,
+#winamp-eq,
+#winamp-pl {
+  position: fixed;
+  z-index: 50;
+  margin: 0;
+}
+#winamp-eq .eq-titlebar,
+#winamp-pl .pl-titlebar {
+  cursor: move;
 }
