@@ -139,6 +139,7 @@ img {
             <canvas id="viz" class="wa-viz" width="280" height="48" hidden aria-hidden="true"></canvas>
             <canvas id="wa-viz" width="76" height="16" aria-label="visualizer" title="click to cycle viz mode"></canvas>
             <div id="audio-player-mount"></div>
+            <input type="file" id="wa-file-loader" accept="audio/*" hidden aria-hidden="true" tabindex="-1">
             <button type="button" class="wa-eject" aria-label="eject"></button>
             <span class="wa-tooltip" data-for="vol" hidden></span>
             <span class="wa-tooltip" data-for="bal" hidden></span>
@@ -336,6 +337,7 @@ import { initPlayer } from './audio/player.js';
 import { initSFX } from './audio/sfx.js';
 import { initKonami } from './interactive/konami.js';
 import { initEasterEggs } from './interactive/easter-eggs.js';
+import { initWinampStep8 } from './interactive/winamp-step8.js';
 
 const TRACKS = [
   { src: 'sounds/midi/01-iris.mid',          title: 'Iris',          artist: 'Goo Goo Dolls',     year: 1998 },
@@ -1627,6 +1629,7 @@ window.__dadeOnTrackEnd = function (curIdx, defaultNext, total) {
 initSFX();
 initEasterEggs();
 initKonami({ onUnlock: function () {} });
+initWinampStep8();
 </script>
 <script>
 // Sprite-fidelity spectrum / oscilloscope viz painted into #wa-viz at the
