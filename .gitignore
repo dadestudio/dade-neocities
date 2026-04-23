@@ -1,5 +1,6 @@
 .env
 node_modules/
+docs/reference/diffs/
 .DS_Store
 .git/
 build/

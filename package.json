@@ -1,3 +1,12 @@
 {
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "visual-check": "node scripts/visual-check.mjs",
+    "visual-update": "node scripts/visual-check.mjs --update"
+  },
+  "devDependencies": {
+    "pixelmatch": "^7.1.0",
+    "playwright": "^1.59.1",
+    "pngjs": "^7.0.0"
+  }
 }
