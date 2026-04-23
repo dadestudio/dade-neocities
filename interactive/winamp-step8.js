@@ -38,22 +38,91 @@ function renderBitmapText(el, label) {
   else el.textContent = label;
 }
 
+var localFileBlobUrl = null;
+var localFileTickRaf = 0;
+
+function stripExtension(name) {
+  return String(name || '').replace(/\.[^/.]+$/, '');
+}
+
+function getTimeSourceEl() {
+  return document.querySelector('#audio-player-mount [data-role="time"]');
+}
+
+function setTrackTitleHint(title) {
+  var lcd = document.querySelector('#audio-player-mount [data-role="lcd"]');
+  if (!lcd) return;
+  lcd.textContent = title || 'LOCAL FILE';
+}
+
+function ensureLocalFileAudio() {
+  var mount = document.getElementById('audio-player-mount');
+  if (!mount) return null;
+  var audio = mount.querySelector('audio[data-role="wa-local-file-audio"]');
+  if (audio) return audio;
+  audio = document.createElement('audio');
+  audio.hidden = true;
+  audio.preload = 'auto';
+  audio.setAttribute('data-role', 'wa-local-file-audio');
+  mount.appendChild(audio);
+  return audio;
+}
+
+function pushLocalFileTime(audio) {
+  var source = getTimeSourceEl();
+  if (!source) return;
+  var elapsed = isFinite(audio.currentTime) ? audio.currentTime : 0;
+  var duration = (isFinite(audio.duration) && audio.duration > 0) ? audio.duration : 0;
+  source.__waRawSource = fmtClock(elapsed) + ' / ' + fmtClock(duration);
+}
+
+function startLocalFileTimeTicker(audio) {
+  function tick() {
+    if (!audio || audio.paused || audio.ended) {
+      localFileTickRaf = 0;
+      return;
+    }
+    pushLocalFileTime(audio);
+    localFileTickRaf = requestAnimationFrame(tick);
+  }
+  if (localFileTickRaf) return;
+  localFileTickRaf = requestAnimationFrame(tick);
+}
+
+function bindLocalFileClock(audio) {
+  if (!audio || audio.__waLocalClockBound) return;
+  audio.__waLocalClockBound = true;
+  ['loadedmetadata', 'durationchange', 'timeupdate', 'seeked'].forEach(function (evt) {
+    audio.addEventListener(evt, function () { pushLocalFileTime(audio); });
+  });
+  audio.addEventListener('play', function () {
+    pushLocalFileTime(audio);
+    startLocalFileTimeTicker(audio);
+  });
+  audio.addEventListener('pause', function () {
+    if (localFileTickRaf) {
+      cancelAnimationFrame(localFileTickRaf);
+      localFileTickRaf = 0;
+    }
+  });
+  audio.addEventListener('ended', function () {
+    if (localFileTickRaf) {
+      cancelAnimationFrame(localFileTickRaf);
+      localFileTickRaf = 0;
+    }
+    pushLocalFileTime(audio);
+  });
+}
+
 function initTimeToggle() {
   var source = document.querySelector('#audio-player-mount [data-role="time"]');
   var target = document.querySelector('#winamp-pl .pl-time-display');
-  if (!source || !target) return;
-
-  if (!document.getElementById('wa-time-toggle-style')) {
-    var style = document.createElement('style');
-    style.id = 'wa-time-toggle-style';
-    style.textContent = '.wa-time-toggle-clickable{cursor:pointer;}';
-    document.head.appendChild(style);
-  }
+  if (!source) return;
 
   var mode = readTimeMode();
-  target.classList.add('wa-time-toggle-clickable');
+  source.style.cursor = 'pointer';
 
-  target.addEventListener('click', function (e) {
+  source.addEventListener('click', function (e) {
     e.stopPropagation();
     mode = (mode === 'elapsed') ? 'remaining' : 'elapsed';
     writeTimeMode(mode);
@@ -61,7 +130,7 @@ function initTimeToggle() {
 
   function tick() {
     requestAnimationFrame(tick);
-    var raw = source.__lastRawText || '';
+    var raw = source.__waRawSource || source.__lastRawText || '';
     var parsed = parseAudioTime(raw);
     var label = '0:00';
     if (parsed) {
@@ -74,10 +143,16 @@ function initTimeToggle() {
         label = fmtClock(parsed.elapsed);
       }
     }
-    if (target.__waTimeLabel === label) return;
-    target.__waTimeLabel = label;
-    target.setAttribute('data-raw', label);
-    renderBitmapText(target, label);
+    if (source.__waTimeLabel !== label) {
+      source.__waTimeLabel = label;
+      source.setAttribute('data-raw', label);
+      renderBitmapText(source, label);
+    }
+    if (target && target.__waTimeLabel !== label) {
+      target.__waTimeLabel = label;
+      target.setAttribute('data-raw', label);
+      renderBitmapText(target, label);
+    }
   }
 
   requestAnimationFrame(tick);
@@ -119,6 +194,47 @@ function initKeyboardShortcuts() {
   }
 
   var fileLoader = document.getElementById('wa-file-loader');
+  if (fileLoader && !fileLoader.__waFileBound) {
+    fileLoader.__waFileBound = true;
+    fileLoader.addEventListener('change', function (e) {
+      var file = e && e.target && e.target.files ? e.target.files[0] : null;
+      if (!file) return;
+
+      if (localFileBlobUrl) URL.revokeObjectURL(localFileBlobUrl);
+      localFileBlobUrl = URL.createObjectURL(file);
+
+      var title = stripExtension(file.name) || 'LOCAL FILE';
+      var usedPlayerUrlApi = false;
+      if (player && typeof player.loadUrl === 'function') {
+        player.loadUrl(localFileBlobUrl, { autoplay: true, title: title });
+        usedPlayerUrlApi = true;
+      } else if (player && typeof player.playUrl === 'function') {
+        player.playUrl(localFileBlobUrl, title);
+        usedPlayerUrlApi = true;
+      } else if (player && typeof player.setSource === 'function') {
+        player.setSource(localFileBlobUrl, true, title);
+        usedPlayerUrlApi = true;
+      }
+
+      if (!usedPlayerUrlApi) {
+        var audio = ensureLocalFileAudio();
+        if (audio) {
+          bindLocalFileClock(audio);
+          if (player && typeof player.stop === 'function') player.stop();
+          audio.src = localFileBlobUrl;
+          audio.load();
+          var playPromise = audio.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(function () {});
+          }
+          pushLocalFileTime(audio);
+        }
+      }
+
+      setTrackTitleHint(title);
+      fileLoader.value = '';
+    });
+  }
   var keyActions = {
     z: function () { player.prev(); },
     x: function () { player.play(); },
