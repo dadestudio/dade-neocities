@@ -1813,8 +1813,8 @@ body.track-loaded #winamp-chrome input[type="range"][data-role="posbar"]::-moz-r
 #winamp-pl .pl-bottom > .pl-bottom-r {
   display: none;
 }
-#winamp-pl .pl-bottom-l { left:   0; width: 125px; background-position:    0  -72px; }
-#winamp-pl .pl-bottom-r { left: 125px; width: 150px; background-position: -126px -72px; }
+#winamp-pl .pl-bottom-l { left:   0; width: 126px; background-position:    0  -72px; }
+#winamp-pl .pl-bottom-r { left: 125px; width: 150px; background-position: -125px -72px; }
 
 /* List area — between the side strips with 3px top padding so the first
    row lines up with the titlebar's bottom recess (matches webamp's
