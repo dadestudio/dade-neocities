@@ -1,0 +1,2 @@
+# Mayor Routing Log
+Append-only. Format: [TIMESTAMP UTC] TASK | CLASSIFICATION | POLECAT DISPATCHED
