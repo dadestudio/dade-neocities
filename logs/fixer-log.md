@@ -1,0 +1,2 @@
+# Fixer Log
+Append-only. Format: [TIMESTAMP UTC] TASK | FAILURE REASONS | FIX APPLIED | TOKENS | COST
